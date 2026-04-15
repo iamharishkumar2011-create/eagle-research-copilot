@@ -34,7 +34,9 @@ from docx.shared import Pt, RGBColor, Inches
 
 MODEL_HEAVY = "claude-sonnet-4-6"   # Problematizer, Theorist, Reviewer
 MODEL_LIGHT = "claude-haiku-4-5-20251001"  # Lit scout formatting, method items
-DB_PATH = "eagle.db"
+import os
+_is_cloud = os.environ.get("STREAMLIT_SERVER_HEADLESS") or os.environ.get("HOME", "").startswith("/home/appuser")
+DB_PATH = "/tmp/eagle.db" if _is_cloud else "eagle.db"
 OPENALEX_BASE = "https://api.openalex.org/works"
 
 STAGES = [
