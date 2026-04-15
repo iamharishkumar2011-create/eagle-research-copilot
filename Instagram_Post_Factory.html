@@ -1,0 +1,1050 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Instagram Post Factory — Multi-Agent AI</title>
+  <meta name="description" content="4 AI agents collaborate to create your complete, ready-to-post Instagram content including strategy, captions, hashtags, and design." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Instrument Sans', 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: #FAFAF9;
+      color: #1c1917;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+    @keyframes slideUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+    @keyframes shimmer { 0%{background-position:-200% 0} 100%{background-position:200% 0} }
+    @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #d6d3d1; border-radius: 3px; }
+
+    /* ─── Layout ─── */
+    .header {
+      padding: 32px 24px 24px;
+      text-align: center;
+      border-bottom: 1px solid #e7e5e4;
+      background: linear-gradient(180deg, #FDF6F0 0%, #FAFAF9 100%);
+    }
+    .header-badge {
+      font-size: 11px; font-weight: 700; color: #E8453C;
+      text-transform: uppercase; letter-spacing: 2.5px; margin-bottom: 10px;
+      display: inline-flex; align-items: center; gap: 6px;
+      background: #E8453C0A; padding: 5px 14px; border-radius: 100px;
+    }
+    .header h1 {
+      font-family: 'DM Serif Display', serif;
+      font-size: 32px; line-height: 1.15; margin-top: 8px;
+      background: linear-gradient(135deg, #1c1917, #44403c);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .header p { font-size: 14px; color: #a8a29e; margin-top: 8px; }
+    .container { max-width: 820px; margin: 0 auto; padding: 28px 18px 60px; }
+
+    /* ─── API Key ─── */
+    .api-key-box {
+      margin-bottom: 22px; padding: 18px; border-radius: 16px;
+      transition: all 0.3s;
+    }
+    .api-key-box.empty { background: #fffbeb; border: 1.5px solid #fde68a; }
+    .api-key-box.set { background: #f0fdf4; border: 1.5px solid #86efac; }
+    .api-key-label {
+      font-size: 11px; font-weight: 700; color: #78716c;
+      text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 8px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .api-key-row { display: flex; gap: 8px; }
+    .api-key-input {
+      flex: 1; padding: 10px 14px; border-radius: 10px; border: 1px solid #e7e5e4;
+      font-size: 13px; outline: none; background: white; font-family: 'SF Mono', 'Fira Code', monospace;
+    }
+    .api-key-input:focus { border-color: #F4A236; box-shadow: 0 0 0 3px #F4A23618; }
+    .api-key-toggle {
+      width: 42px; border-radius: 10px; border: 1px solid #e7e5e4;
+      background: white; cursor: pointer; font-size: 16px; display: flex;
+      align-items: center; justify-content: center;
+    }
+    .api-key-hint { font-size: 11px; color: #a8a29e; margin-top: 8px; }
+
+    /* ─── History ─── */
+    .history-toggle {
+      width: 100%; padding: 10px 16px; border-radius: 10px; border: 1px solid #e7e5e4;
+      background: white; cursor: pointer; display: flex; justify-content: space-between;
+      align-items: center; font-size: 13px; font-weight: 600; color: #78716c;
+      transition: all 0.2s; margin-bottom: 8px;
+    }
+    .history-toggle:hover { background: #fafaf9; border-color: #d6d3d1; }
+    .history-arrow { transition: transform 0.2s; }
+    .history-arrow.open { transform: rotate(180deg); }
+    .history-entry {
+      padding: 10px 14px; border-radius: 10px; background: white;
+      border: 1px solid #e7e5e4; display: flex; justify-content: space-between;
+      align-items: center; animation: slideUp 0.3s ease-out; margin-bottom: 6px;
+    }
+    .history-entry-title { font-size: 13px; font-weight: 600; color: #44403c; }
+    .history-entry-meta { font-size: 11px; color: #a8a29e; }
+    .history-btn {
+      padding: 4px 12px; border-radius: 6px; border: 1px solid #e7e5e4;
+      background: white; cursor: pointer; font-size: 11px; font-weight: 600;
+    }
+    .history-load { color: #6B5CE7; }
+    .history-load:hover { background: #f5f3ff; }
+    .history-del { color: #ef4444; border-color: #fecaca; padding: 4px 8px; }
+    .history-del:hover { background: #fef2f2; }
+
+    /* ─── Post Type ─── */
+    .section-label {
+      font-size: 11px; font-weight: 700; color: #78716c;
+      text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 10px;
+    }
+    .post-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(155px, 1fr)); gap: 8px;
+    }
+    .post-btn {
+      padding: 12px 14px; border-radius: 12px; border: 1.5px solid #e7e5e4;
+      background: white; cursor: pointer; text-align: left; transition: all 0.2s;
+    }
+    .post-btn:hover { border-color: #d6d3d1; background: #fafaf9; }
+    .post-btn.active { border-color: #E8453C; background: #E8453C08; }
+    .post-btn.disabled { cursor: not-allowed; opacity: 0.7; }
+    .post-btn-label { font-size: 14px; font-weight: 600; color: #44403c; }
+    .post-btn.active .post-btn-label { color: #E8453C; }
+    .post-btn-desc { font-size: 11px; color: #a8a29e; margin-top: 2px; }
+    .custom-input {
+      width: 100%; padding: 12px 16px; border-radius: 12px; border: 1.5px solid #e7e5e4;
+      font-size: 14px; margin-top: 10px; outline: none; background: white;
+      font-family: inherit;
+    }
+    .custom-input:focus { border-color: #E8453C; box-shadow: 0 0 0 3px #E8453C12; }
+
+    /* ─── Agent Cards ─── */
+    .agent-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+      gap: 8px; margin-bottom: 20px;
+    }
+    .agent-card {
+      display: flex; align-items: center; gap: 12px; padding: 12px 16px;
+      border-radius: 12px; border: 1.5px solid #e7e5e4; transition: all 0.3s;
+      background: #fafaf9; position: relative;
+    }
+    .agent-card.active { border-color: var(--agent-color); background: color-mix(in srgb, var(--agent-color) 6%, white); }
+    .agent-card.done { background: #f0fdf4; border-color: #86efac; }
+    .agent-card.error { background: #fef2f2; border-color: #fecaca; }
+    .agent-icon {
+      width: 40px; height: 40px; border-radius: 10px; display: flex;
+      align-items: center; justify-content: center; font-size: 20px; color: white;
+      background: #d6d3d1; flex-shrink: 0;
+    }
+    .agent-card.active .agent-icon { background: var(--agent-color); animation: pulse 1.5s infinite; }
+    .agent-card.done .agent-icon { background: #22c55e; }
+    .agent-card.error .agent-icon { background: #ef4444; }
+    .agent-name { font-weight: 600; font-size: 13px; color: #44403c; }
+    .agent-card.active .agent-name { color: var(--agent-color); }
+    .agent-status { font-size: 11px; color: #a8a29e; }
+    .agent-dot { width: 8px; height: 8px; border-radius: 50%; animation: pulse 1.5s infinite; }
+    .regen-btn {
+      width: 28px; height: 28px; border-radius: 8px; border: 1px solid #e7e5e4;
+      background: white; cursor: pointer; display: flex; align-items: center;
+      justify-content: center; font-size: 16px; color: #78716c; transition: all 0.2s;
+    }
+    .regen-btn:hover { background: var(--agent-color); color: white; border-color: var(--agent-color); }
+
+    /* ─── Progress Bar ─── */
+    .progress-box { width: 100%; margin-bottom: 20px; }
+    .progress-header { display: flex; justify-content: space-between; margin-bottom: 6px; }
+    .progress-label { font-size: 12px; font-weight: 600; color: #78716c; }
+    .progress-count { font-size: 12px; font-weight: 700; color: #E8453C; }
+    .progress-track {
+      width: 100%; height: 8px; background: #e7e5e4; border-radius: 100px; overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%; border-radius: 100px;
+      background: linear-gradient(90deg, #E8453C, #F4A236);
+      transition: width 0.5s ease-in-out;
+    }
+
+    /* ─── Generate Button ─── */
+    .generate-btn {
+      width: 100%; padding: 16px; border-radius: 14px; border: none;
+      color: white; font-size: 16px; font-weight: 700; transition: all 0.3s;
+      font-family: inherit; margin-bottom: 24px;
+    }
+    .generate-btn.ready {
+      background: linear-gradient(135deg, #E8453C, #F4A236); cursor: pointer;
+      box-shadow: 0 8px 30px rgba(232,69,60,0.25);
+    }
+    .generate-btn.ready:hover { transform: translateY(-2px); box-shadow: 0 12px 36px rgba(232,69,60,0.3); }
+    .generate-btn.running {
+      background: linear-gradient(135deg, #ef4444, #dc2626); cursor: pointer;
+      box-shadow: 0 8px 30px rgba(239,68,68,0.25);
+    }
+    .generate-btn.disabled {
+      background: #d6d3d1; cursor: not-allowed; box-shadow: none;
+    }
+
+    /* ─── Error ─── */
+    .error-box {
+      background: #fef2f2; border: 1px solid #fecaca; border-radius: 12px;
+      padding: 16px; margin-bottom: 20px;
+    }
+    .error-text { font-size: 13px; color: #dc2626; font-weight: 600; }
+
+    /* ─── Tabs ─── */
+    .tab-bar {
+      display: flex; gap: 4px; margin-bottom: 16px; border-bottom: 1px solid #e7e5e4;
+    }
+    .tab-btn {
+      padding: 10px 16px; border-radius: 10px 10px 0 0; border: none;
+      background: transparent; border-bottom: 2px solid transparent;
+      color: #a8a29e; font-weight: 600; font-size: 13px; cursor: pointer;
+      transition: all 0.2s; font-family: inherit;
+    }
+    .tab-btn.active { background: white; color: var(--tab-color); border-bottom-color: var(--tab-color); }
+    .tab-content {
+      background: white; border-radius: 0 12px 12px 12px; border: 1px solid #e7e5e4;
+      padding: 24px; min-height: 200px;
+    }
+    .tab-header {
+      display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;
+    }
+    .tab-title {
+      font-family: 'DM Serif Display', serif; font-size: 20px;
+    }
+
+    /* ─── Panels ─── */
+    .stream-pre {
+      font-size: 12px; white-space: pre-wrap; color: #78716c;
+      background: #fafaf9; padding: 16px; border-radius: 10px;
+      max-height: 300px; overflow: auto; font-family: 'SF Mono', 'Fira Code', monospace;
+      border: 1px solid #e7e5e4;
+    }
+    .strategy-item { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 10px; }
+    .strategy-icon { font-size: 16px; flex-shrink: 0; }
+    .strategy-label { font-weight: 600; font-size: 13px; }
+    .strategy-val { font-size: 13px; color: #57534e; }
+
+    .section-title {
+      font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;
+    }
+    .caption-box {
+      font-size: 14px; line-height: 1.7; color: #44403c; white-space: pre-wrap;
+      background: #fafaf9; padding: 16px; border-radius: 12px; border: 1px solid #e7e5e4;
+    }
+    .caption-cta { margin-top: 12px; font-weight: 600; color: #E8453C; }
+    .char-counter { font-size: 11px; font-weight: 600; display: flex; align-items: center; gap: 4px; }
+    .char-green { color: #22c55e; }
+    .char-amber { color: #f59e0b; }
+    .char-red { color: #ef4444; }
+    .reel-box {
+      font-size: 13px; color: #57534e; font-style: italic;
+      background: #f5f3ff; padding: 14px; border-radius: 10px; border: 1px solid #e9e5ff;
+    }
+    .alt-hooks { font-size: 12px; color: #a8a29e; margin-top: 6px; }
+
+    .tag-group { margin-bottom: 14px; }
+    .tag-wrap { display: flex; flex-wrap: wrap; gap: 6px; }
+    .tag-chip {
+      padding: 4px 12px; border-radius: 100px; font-size: 12px; font-weight: 500;
+    }
+    .branded-tag {
+      padding: 6px 16px; border-radius: 100px; font-size: 14px; font-weight: 700;
+    }
+    .location-wrap { display: flex; gap: 8px; flex-wrap: wrap; }
+    .location-tag { font-size: 12px; color: #78716c; }
+    .posting-note { font-size: 12px; color: #a8a29e; margin-top: 8px; font-style: italic; }
+
+    .design-center { display: flex; flex-direction: column; align-items: center; gap: 16px; }
+    .svg-frame {
+      width: 100%; max-width: 400px; aspect-ratio: 1/1; border-radius: 16px;
+      overflow: hidden; border: 1px solid #e7e5e4; background: white;
+    }
+    .svg-frame svg { width: 100%; height: 100%; }
+    .design-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+    .dl-svg-btn {
+      padding: 10px 24px; border-radius: 10px; border: none; cursor: pointer;
+      background: #6B5CE7; color: white; font-weight: 600; font-size: 13px; font-family: inherit;
+    }
+    .dl-svg-btn:hover { background: #5a4bd6; }
+    .dl-png-btn {
+      padding: 10px 24px; border-radius: 10px; border: none; cursor: pointer;
+      background: linear-gradient(135deg, #E8453C, #F4A236); color: white;
+      font-weight: 600; font-size: 13px; font-family: inherit;
+    }
+    .dl-png-btn:hover { opacity: 0.9; }
+
+    /* ─── Copy / Action Buttons ─── */
+    .copy-btn {
+      padding: 6px 14px; border-radius: 8px; border: 1px solid #e7e5e4; cursor: pointer;
+      background: white; color: #57534e; font-size: 12px; font-weight: 600;
+      transition: all 0.2s; font-family: inherit;
+    }
+    .copy-btn.copied { background: #22c55e; color: white; border-color: #22c55e; }
+    .combo-copy-btn {
+      width: 100%; padding: 14px 24px; border-radius: 12px;
+      border: 2px dashed #6B5CE740; cursor: pointer; background: #f5f3ff;
+      color: #6B5CE7; font-size: 14px; font-weight: 700; transition: all 0.2s;
+      margin-bottom: 10px; font-family: inherit;
+    }
+    .combo-copy-btn:hover { background: #ede9fe; }
+    .combo-copy-btn.copied { background: #22c55e; color: white; border-color: #22c55e; }
+    .download-all-btn {
+      width: 100%; padding: 16px 24px; border-radius: 14px; border: none; cursor: pointer;
+      background: linear-gradient(135deg, #E8453C, #F4A236); color: white;
+      font-size: 16px; font-weight: 700; letter-spacing: 0.5px;
+      box-shadow: 0 8px 30px rgba(232,69,60,0.3); transition: transform 0.2s;
+      font-family: inherit;
+    }
+    .download-all-btn:hover { transform: translateY(-2px); }
+    .download-note { text-align: center; font-size: 12px; color: #a8a29e; margin-top: 10px; }
+  </style>
+</head>
+<body>
+
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+<script type="text/babel">
+const { useState, useRef, useCallback, useEffect } = React;
+
+/* ══════════════════════════════════════════════════════════
+   CONSTANTS
+   ══════════════════════════════════════════════════════════ */
+
+const AGENTS = [
+  { id: "strategist", name: "Strategy Agent", icon: "🎯", color: "#E8453C", desc: "Analyzes niche, audience & viral angles" },
+  { id: "copywriter", name: "Copy Agent",     icon: "✍️", color: "#F4A236", desc: "Writes captions, hooks & CTAs" },
+  { id: "designer",   name: "Design Agent",   icon: "🎨", color: "#6B5CE7", desc: "Creates the visual post layout" },
+  { id: "hashtag",    name: "Hashtag Agent",   icon: "#️⃣",  color: "#4CAF7D", desc: "Researches optimal hashtag sets" },
+];
+
+const POST_TYPES = [
+  { id: "tiffin",    label: "🍱 School Tiffin Reel", desc: "Quick recipe post for tiffin ideas" },
+  { id: "parenting", label: "👧 Parenting Tip",      desc: "Carousel or single-image tip post" },
+  { id: "routine",   label: "🌅 Mom Routine",        desc: "Day-in-life aesthetic content" },
+  { id: "snack",     label: "🍪 Healthy Snack",      desc: "Quick healthy snack recipe post" },
+  { id: "hack",      label: "💡 Mom Life Hack",      desc: "Practical household/parenting hack" },
+  { id: "custom",    label: "✏️ Custom Topic",       desc: "Enter your own topic" },
+];
+
+const HISTORY_KEY = "igPostFactory_history";
+const MAX_HISTORY = 5;
+const IG_CHAR_LIMIT = 2200;
+
+const TOPIC_MAP = {
+  tiffin:    "Quick, healthy school tiffin idea that kids will actually eat — for a busy Gurgaon mom with 3 daughters",
+  parenting: "Practical parenting tip for raising confident daughters in urban India — relatable for Gurgaon moms",
+  routine:   "Morning routine Reel — beautiful chaos of getting 3 girls ready for school in Gurgaon",
+  snack:     "Healthy after-school snack that looks fun and tastes amazing — hidden nutrition, kid-approved",
+  hack:      "Life hack that saves time for busy Indian moms managing 3 kids, home, and sanity",
+};
+
+/* ══════════════════════════════════════════════════════════
+   SYSTEM PROMPTS
+   ══════════════════════════════════════════════════════════ */
+
+const SYSTEM_PROMPTS = {
+  strategist: `You are an elite Instagram content strategist specializing in the Indian mom influencer space (Gurgaon, India). Your job is to analyze a post topic and produce a sharp content strategy brief.
+
+You must respond ONLY in this exact JSON format, no markdown, no backticks:
+{"hook":"the scroll-stopping first line or visual hook","angle":"the unique angle that makes this different from 1000 other posts","emotion":"the primary emotion to trigger","format_advice":"specific advice on visual format","viral_trigger":"what makes someone share this to WhatsApp","target_persona":"1-line description of exact woman who saves this","cta_direction":"what the caption CTA should push toward"}`,
+
+  copywriter: `You are an elite Instagram copywriter for Indian mom content creators. You write in Hinglish (Hindi-English mix) that feels natural, warm, and relatable — like a Gurgaon mom talking to her friend.
+
+Given a strategy brief, write the complete caption. You must respond ONLY in this exact JSON format, no markdown, no backticks:
+{"hook_line":"the very first line that stops the scroll (max 10 words)","caption_body":"the full caption body (150-200 words, Hinglish, with line breaks as \\\\n)","cta":"the call-to-action line","alt_hooks":["hook option 2","hook option 3"],"reel_script":"Reel voiceover script in 60 words or less (Hinglish)"}`,
+
+  hashtag: `You are an Instagram hashtag research specialist for Indian mom/parenting/food content. You know which hashtags have the right volume-to-competition ratio for accounts under 50K followers.
+
+Given a post topic and strategy, produce the optimal hashtag strategy. You must respond ONLY in this exact JSON format, no markdown, no backticks:
+{"primary_hashtags":["5 high-volume hashtags 500K-5M posts"],"niche_hashtags":["5 medium hashtags 50K-500K posts"],"micro_hashtags":["5 low-competition hashtags under 50K posts"],"branded_hashtag":"one unique branded hashtag suggestion","location_tags":["2-3 location tags"],"posting_notes":"brief note on hashtag placement strategy"}`,
+
+  designer: `You are an elite Instagram visual designer. Given a content brief and caption, create the actual Instagram post as an SVG graphic.
+
+Design a beautiful, modern Instagram post (1080x1080 ratio, use viewBox="0 0 1080 1080"). The design must:
+- Use bold, clean typography readable on mobile
+- Warm, inviting color palette for a mom/food/parenting brand
+- Include the hook line prominently
+- Feel premium but approachable
+- Use geometric shapes, gradients, and smart layout
+
+You must respond ONLY with raw SVG code starting with <svg. No JSON, no markdown, no backticks. Just SVG.`
+};
+
+/* ══════════════════════════════════════════════════════════
+   HELPERS
+   ══════════════════════════════════════════════════════════ */
+
+function loadHistory() {
+  try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]"); }
+  catch { return []; }
+}
+
+function saveToHistory(entry) {
+  const h = loadHistory();
+  h.unshift(entry);
+  if (h.length > MAX_HISTORY) h.length = MAX_HISTORY;
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(h));
+}
+
+/* ══════════════════════════════════════════════════════════
+   DEMO DATA (works without API key)
+   ══════════════════════════════════════════════════════════ */
+
+const DEMO_DATA = {
+  tiffin: {
+    strategist: {hook:"Yeh tiffin khali wapas aayega — guaranteed! 🍱",angle:"Not just another recipe — it's a 3-step formula that solves the 'mera bachcha khata hi nahi' problem with science-backed kid psychology",emotion:"Guilt-free pride + relief that your kid will ACTUALLY eat this",format_advice:"Carousel: Slide 1 = hook + finished tiffin photo, Slides 2-5 = step-by-step, Slide 6 = kid's reaction + CTA",viral_trigger:"Every mom in a WhatsApp group has THAT friend whose kid never eats — this gets forwarded as 'try this na'",target_persona:"Neha, 33, Gurgaon mom, 2 kids, both picky eaters, tired of dal-roti-aloo routine, wants Instagram-worthy tiffin but in under 15 mins",cta_direction:"Save for tomorrow morning + follow for daily tiffin ideas"},
+    copywriter: {hook_line:"Yeh tiffin khali wapas aayega! 🍱",caption_body:"Monday morning — 7:15 AM\nTeeno betiyaan ready, bags packed, and maine socha — aaj kuch alag try karte hain 💡\n\nBanaya Rainbow Pinwheel Wraps 🌈\n3 ingredients. 10 minutes. Zero complaints.\n\nStep 1: Chapati pe cheese spread lagao\nStep 2: Grated carrot + cucumber strips rakhlo\nStep 3: Roll karo, cut karo — DONE! ✂️\n\nResult? Sab kha ke aaye. Tiffin KHALI! 🎉\n\nMoms, I know that feeling jab tiffin wapas aata hai aur sab kuch waisa ka waisa hota hai 😩 But trust me, kids eat with their eyes first.\n\nColourful = exciting = finished tiffin.\n\nAur agar aapke ghar bhi picky eater hai, toh kal subah try karo. Screenshot lo abhi! 📱",cta:"💾 SAVE karo kal subah ke liye! Follow @youraccount for daily tiffin magic ✨",alt_hooks:["Maine tiffin ka code crack kar liya 🔓","3 ingredients, 10 min, ZERO leftovers 🍱"],reel_script:"Monday 7 AM. Teeno ko tiffin dena hai. Aaj try kiya Rainbow Wraps — chapati, cheese, veggies. Roll karo, cut karo, pack karo. Result? Tiffin khali wapas aaya! Agar aapke ghar bhi picky eater hai, try karna — save karo!"},
+    hashtag: {primary_hashtags:["SchoolTiffin","IndianMomLife","KidsFoodIdeas","HealthyTiffin","LunchBoxIdeas"],niche_hashtags:["GurgaonMoms","TiffinRecipes","PickyEaterMom","IndianSchoolLunch","MomHacks"],micro_hashtags:["TiffinTime","DabbaIdeas","MomOfThree","GurgaonParenting","KhanaKhazana"],branded_hashtag:"TiffinByMom",location_tags:["Gurgaon, India","Delhi NCR","Haryana"],posting_notes:"Use primary in caption, niche + micro in first comment. Post between 7-8 AM when moms are prepping tiffin."},
+  },
+  parenting: {
+    strategist: {hook:"Stop saying 'Good Girl' — here's what to say instead 👧",angle:"Counter-intuitive parenting advice backed by child psychology that makes parents rethink everyday praise habits",emotion:"Slight guilt transforming into empowerment — 'I can do this better'",format_advice:"Carousel: Slide 1 = bold text hook, Slides 2-6 = wrong phrase vs right phrase comparisons, Slide 7 = summary + CTA",viral_trigger:"Creates a 'wait, I do this too!' moment that moms want to share + discuss in groups",target_persona:"Priya, 35, Delhi mom, conscious about raising confident daughters, follows parenting pages actively",cta_direction:"Save this for daily reminders + tag a mom who needs to see this"},
+    copywriter: {hook_line:"Stop saying 'Good Girl' to your daughter 🚫",caption_body:"Main bhi yahi karti thi. Har baar beti kuch achha karti — 'Good girl!'\n\nPar ek parenting workshop mein samjha ki generic praise se bacche APPROVAL-DEPENDENT ban jaate hain 😳\n\nAb main yeh kehti hoon:\n❌ Good girl → ✅ 'Tune bahut mehnat ki!'\n❌ So smart → ✅ 'Tujhe figure out karna aaya, wow!'\n❌ Good job → ✅ 'Mujhe batao tune kaise kiya?'\n\nFark? Effort praise vs person praise.\n\nJab hum effort ko praise karte hain, bache RISK lena seekhte hain. Failure se darte nahi.\n\n3 betiyaan hain meri — aur yeh small change se unki confidence mein HUGE fark aaya hai 🙌\n\nSwipe karo for the complete guide ➡️",cta:"💾 SAVE karo and tag a mom who needs this! Follow for more conscious parenting tips 🌟",alt_hooks:["Yeh 3 words aapki beti ki confidence tod rahe hain","Parenting mein sabse badi galti jo hum sab karte hain"],reel_script:"Stop saying good girl. Main bhi karti thi, phir samjha — generic praise se bacche approval-dependent bante hain. Ab kehti hoon — tune bahut mehnat ki. Effort praise vs person praise. Try karo, fark dikhega."},
+    hashtag: {primary_hashtags:["ParentingTips","MomLife","RaisingGirls","PositiveParenting","IndianParenting"],niche_hashtags:["ConsciousParenting","GirlMom","ParentingInIndia","MomOfDaughters","GentleParenting"],micro_hashtags:["GurgaonMom","ParentingHacks","ConfidentKids","DesiParenting","MomWisdom"],branded_hashtag:"MomOf3Lessons",location_tags:["Gurgaon, India","Delhi NCR"],posting_notes:"Post between 9-10 PM when moms are reflecting after kids sleep. Hashtags in first comment."},
+  },
+  routine: {
+    strategist: {hook:"5:30 AM — 3 girls, 3 schools, 1 very awake mom ☀️",angle:"Raw, unfiltered morning chaos that's beautiful in its imperfection — not aspirational, but deeply relatable",emotion:"'This IS my life too!' — validation and belonging",format_advice:"Reel format: Fast-paced transitions showing real morning chaos with trending audio, text overlays for timing",viral_trigger:"Moms LOVE seeing their own chaotic mornings reflected — it's validation that they're not alone",target_persona:"Shalini, 34, working mom, always running late, feels guilty she's not like Instagram-perfect moms",cta_direction:"Comment your morning chaos time + follow for real mom content"},
+    copywriter: {hook_line:"5:30 AM — Teen betiyaan, teen schools 😅",caption_body:"Meri subah ka scene:\n⏰ 5:30 — Alarm. Snooze. Alarm again.\n☕ 5:45 — Chai. Non-negotiable.\n🍳 6:00 — 3 alag tiffins start (haan, teeno ko alag chahiye 🙄)\n👧 6:30 — 'Mummy meri ponytail tight hai!'\n👧 6:35 — 'Mummy woh wali ribbon chahiye!'\n👧 6:40 — Chhoti abhi bhi so rahi hai 😴\n🏃‍♀️ 7:15 — Bhago bhago bus aa gayi!\n🧘 7:30 — Silence. Finally. Second chai ☕\n\nYeh daily hai. DAILY. 365 days.\n\nPar you know what? In 10 years jab ghar quiet hoga, main yahi chaos miss karungi 🥹\n\nKaun kaun relate kar raha hai? Batao apna timing! ⬇️",cta:"⏰ Comment mein batao YOUR morning kab start hoti hai! Follow for daily real mom content 💛",alt_hooks:["Meri subah dekhoge toh apni yaad aayegi 🫣","Nobody told me motherhood = professional multitasking"],reel_script:"5:30 alarm. Chai first. 3 alag tiffins because teeno ko alag chahiye. Ponytail drama, ribbon crisis, chhoti still sleeping. Bus aa gayi BHAGO! 7:30 — silence, second chai. This is my daily life. Relate karo toh follow karo!"},
+    hashtag: {primary_hashtags:["MorningRoutine","MomRoutine","MomLifeBelike","RealMomLife","DayInMyLife"],niche_hashtags:["IndianMomRoutine","MomOf3","SchoolMorning","ChaosAndCalm","MomHumor"],micro_hashtags:["GurgaonMornings","3GirlsMom","MummyLife","MorningChaos","RealNotPerfect"],branded_hashtag:"MorningsWithMom",location_tags:["Gurgaon, India","Delhi NCR"],posting_notes:"Post as Reel at 7-8 AM when moms are IN their morning chaos. Use trending audio."},
+  },
+  snack: {
+    strategist: {hook:"Yeh healthy snack bache MAANGENGE — no sugar, no maida! 🍪",angle:"Hidden nutrition hack that looks and tastes like junk food but is actually healthy — the ultimate mom win",emotion:"Smug satisfaction of a mom who cracked the code",format_advice:"Reel: Quick recipe format with satisfying ASMR sounds, close-up shots of mixing and final product",viral_trigger:"'No sugar no maida but bacche maang rahe hain?!' — instant save + forward material",target_persona:"Ritika, 32, health-conscious mom tired of fighting with kids over packaged snacks",cta_direction:"Save recipe + try this weekend"},
+    copywriter: {hook_line:"No maida, no sugar, still addictive! 🤯",caption_body:"Bacchon ne bola — Mummy, Oreo chahiye! 🍪\nMaine bola — Ruko, better version banati hoon 😏\n\nRagi Chocolate Cookies 🍫\n\n✅ Ragi flour — calcium PACKED\n✅ Jaggery — no refined sugar\n✅ Desi ghee — good fats\n✅ Cocoa powder — antioxidants\n\nBanane mein: 15 min\nResult: Teeno ne 4-4 khaaye 🎉\n\nRecipe:\nMix 1 cup ragi flour + 3 tbsp cocoa + crushed jaggery.\nAdd melted ghee, make dough.\nSmall balls banao, flatten karo.\n180° oven, 12 min. DONE!\n\nNo packet wali cookies when you have THIS recipe 💪\n\nWeekend pe try karo — bachon ka reaction dekhna! 🤩",cta:"📌 SAVE karo weekend ke liye! Share with a mom who's tired of saying NO to junk 🚫",alt_hooks:["Oreo ki jagah yeh khilao — bacche fark nahi bata paayenge","Healthy snack jo bacche KHUD maangenge"],reel_script:"Bacchon ne bola Oreo chahiye. Maine bola ruko. Ragi flour, jaggery, ghee, cocoa — mix karo, shape karo, oven mein dalo. 12 minutes. Result? Teeno ne 4-4 khaaye. Zero guilt. Save karo recipe!"},
+    hashtag: {primary_hashtags:["HealthySnacks","KidsRecipes","NoMaida","HealthyBaking","MomRecipes"],niche_hashtags:["RagiRecipe","SugarFreeSnacks","IndianHealthyFood","KidsNutrition","GuiltyFreeSnacks"],micro_hashtags:["RagiCookies","HealthyMomHack","DesiHealthy","BakeWithKids","NutritionMom"],branded_hashtag:"HealthyByMom",location_tags:["Gurgaon, India","Delhi NCR"],posting_notes:"Post Friday evening/Saturday morning when moms plan weekend activities. Recipe posts get highest saves."},
+  },
+  hack: {
+    strategist: {hook:"2 minute hack that saved me 2 hours EVERY week ⏰",angle:"Systems thinking for moms — a tiny process change that creates cascading time savings across the whole week",emotion:"Relief + 'why didn't I think of this sooner?!' energy",format_advice:"Single image with bold text or short Reel showing the hack in action with before/after comparison",viral_trigger:"Immediately actionable — moms can try it TODAY and feel the difference by tomorrow",target_persona:"Megha, 36, overwhelmed working mom who feels like there aren't enough hours in the day",cta_direction:"Try it today + share your own hack in comments"},
+    copywriter: {hook_line:"2 minute hack = 2 hours saved weekly ⏰",caption_body:"Sunday raat ko ek kaam karti hoon jo poore hafte ka stress kam kar deta hai 🙌\n\nSUNDAY BASKET METHOD 🧺\n\n5 containers label karo — Mon to Fri\nHar container mein rakhdo:\n📌 School notices/forms\n📌 Snack ideas list\n📌 Extra hair ties, clips\n📌 Any pending homework\n📌 Activity class ka stuff\n\nSubah uthke sirf container uthao — NO thinking required!\n\nPehle meri mornings: PURE CHAOS\n'Kahan hai woh form?!' 'Ribbon kidhar gayi?!'\n\nAb? Smooth like butter 🧈\n\nYeh hack meri friend ne diya tha. Game changer hai LITERALLY.\n\nTeeno betiyaan ka sab organized. Mummy ka BP normal 😂\n\nTry karo aaj hi — Sunday hai, perfect time!",cta:"🧺 Comment mein batao YOUR best mom hack! Best one gets a shoutout! Follow for daily hacks 💡",alt_hooks:["Sunday ko 2 min do, pure hafte ki tension khatam","Yeh hack jaanne ke baad subah ki bhagdaud band"],reel_script:"Sunday night hack jo life change kar dega. 5 containers, Monday to Friday label karo. School stuff, snacks, accessories — sab rakh do. Subah sirf container uthao. No searching, no stress. Try karo!"},
+    hashtag: {primary_hashtags:["MomHacks","LifeHacks","OrganizedMom","MomTips","ParentingHacks"],niche_hashtags:["IndianMomHacks","MorningRoutineTips","MomOrganization","TimeManagement","BusyMomLife"],micro_hashtags:["SundayPrep","MomOfThreeHacks","GurgaonMomLife","SmartMom","HacksByMom"],branded_hashtag:"HacksWithMom",location_tags:["Gurgaon, India","Delhi NCR"],posting_notes:"Post Sunday morning when moms are in planning mode. Hack posts get highest shares."},
+  },
+  custom: {
+    strategist: {hook:"Something every Indian mom needs to hear today 💛",angle:"Personal, authentic storytelling that breaks the typical influencer mold with raw honesty",emotion:"Emotional connection — feeling seen and understood",format_advice:"Single image with heartfelt typography or short talking-head Reel with captions",viral_trigger:"Emotional resonance — moms forward this saying 'yeh padho, exactly my feelings'",target_persona:"Any Indian mom aged 28-42 who scrolls Instagram at night after kids sleep, looking for content that validates her daily struggles",cta_direction:"Share your story in comments + follow for more real mom content"},
+    copywriter: {hook_line:"Koi nahi poochta — Mummy, tum theek ho? 🥺",caption_body:"Subah se shaam tak sab ke liye kuch na kuch.\n\nTiffin ✅ Homework ✅ Activities ✅\nGhar ka kaam ✅ Office ka kaam ✅\n\nPar ek baar bhi kisi ne nahi poocha — 'Mummy, tum theek ho?'\n\nHum moms na, superwoman ban jaati hain. Sab handle karti hain. Smile ke saath.\n\nPar andar se thak jaati hain. Bahut thak jaati hain. 😔\n\nToh aaj main khud se pooch rahi hoon — 'Main theek hoon?'\nAnswer: Haan, theek hoon. Par thodi si appreciation chahiye.\n\nAgar aap bhi aisi mom ho jo sab ke liye jeeti ho — yeh post aapke liye hai. ❤️\n\nYou're doing AMAZING, mama. Even on the hard days. 🌸",cta:"💛 Is post ko us mom ko bhejo jisko aaj ek hug chahiye. Follow for real mom talk ✨",alt_hooks:["Mummy bhi insaan hai — reminder 📌","Sab ke liye strong, par khud ke liye? 🥲"],reel_script:"Subah se shaam tak sab ke liye. Tiffin, homework, ghar ka kaam. Par koi nahi poochta — mummy tum theek ho? Aaj main khud se pooch rahi hoon. You're doing amazing mama. Even on the hard days."},
+    hashtag: {primary_hashtags:["MomLife","IndianMom","Motherhood","MomFeels","RealTalk"],niche_hashtags:["MomBurnout","MomAppreciation","IndianMomLife","MomStruggle","DesiMom"],micro_hashtags:["MommyDiaries","MomVoice","GurgaonMom","TiredButGrateful","MomTruth"],branded_hashtag:"RealMomTalk",location_tags:["Gurgaon, India","Delhi NCR"],posting_notes:"Post between 9-11 PM — emotional content performs best when moms are alone scrolling after kids sleep."},
+  },
+};
+
+const DEMO_SVG = `<svg viewBox="0 0 1080 1080" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#FDF6F0"/><stop offset="100%" stop-color="#FDEEE8"/></linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#E8453C"/><stop offset="100%" stop-color="#F4A236"/></linearGradient>
+  </defs>
+  <rect width="1080" height="1080" fill="url(#bg)"/>
+  <rect x="60" y="60" width="960" height="960" rx="40" fill="white" opacity="0.7"/>
+  <rect x="80" y="80" width="920" height="12" rx="6" fill="url(#accent)"/>
+  <circle cx="540" cy="340" r="120" fill="#E8453C" opacity="0.1"/>
+  <text x="540" y="300" text-anchor="middle" font-family="Georgia, serif" font-size="72" font-weight="bold" fill="#2D1B14">🍱</text>
+  <text x="540" y="420" text-anchor="middle" font-family="Georgia, serif" font-size="52" font-weight="bold" fill="#2D1B14">Yeh Tiffin Khali</text>
+  <text x="540" y="490" text-anchor="middle" font-family="Georgia, serif" font-size="52" font-weight="bold" fill="#E8453C">Wapas Aayega!</text>
+  <rect x="340" y="540" width="400" height="4" rx="2" fill="#F4A236"/>
+  <text x="540" y="610" text-anchor="middle" font-family="sans-serif" font-size="30" fill="#78716c">3 ingredients • 10 minutes</text>
+  <text x="540" y="660" text-anchor="middle" font-family="sans-serif" font-size="30" fill="#78716c">Zero complaints ✨</text>
+  <rect x="300" y="730" width="480" height="70" rx="35" fill="url(#accent)"/>
+  <text x="540" y="775" text-anchor="middle" font-family="sans-serif" font-size="28" font-weight="bold" fill="white">SAVE for Tomorrow Morning 💾</text>
+  <text x="540" y="920" text-anchor="middle" font-family="sans-serif" font-size="22" fill="#a8a29e">Follow for daily tiffin ideas ✨</text>
+  <circle cx="540" cy="975" r="4" fill="#E8453C"/>
+</svg>`;
+
+async function simulateAgent(agentId, onStream, signal) {
+  const words = agentId === "designer" ? ["Generating", "design", "..."] : ["Analyzing", "content", "strategy", "...", "Building", "output", "..."];
+  let text = "";
+  for (const w of words) {
+    if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
+    text += w + " ";
+    onStream(text);
+    await new Promise(r => setTimeout(r, 200 + Math.random() * 300));
+  }
+}
+
+function buildUserPrompt(agent, topic, postType, customTopic, prev) {
+  const t = postType === "custom" ? customTopic : topic;
+  switch (agent) {
+    case "strategist":
+      return `Create a content strategy brief for this Instagram post:\nTopic: ${t}\nPost Type: ${postType}\nChannel: Indian mom from Gurgaon with 3 school-going daughters, focus on tiffin/cooking + parenting\nAudience: Urban Indian moms (25-40), primarily NCR/metro cities\nAccount stage: Growing (under 50K followers)`;
+    case "copywriter":
+      return `Write the Instagram caption based on this strategy brief:\n${JSON.stringify(prev.strategist)}\n\nOriginal topic: ${t}\nTone: Hinglish, warm, relatable Gurgaon mom voice\nFormat: ${postType}`;
+    case "hashtag":
+      return `Research hashtags for this post:\nTopic: ${t}\nStrategy: ${JSON.stringify(prev.strategist)}\nPost type: ${postType}\nAccount: Indian mom food/parenting channel, growing stage`;
+    case "designer":
+      return `Design an Instagram post (1080x1080) for:\nHook line: ${prev.copywriter?.hook_line || t}\nTopic: ${t}\nBrand vibe: Warm, modern Indian mom brand. Colors: warm coral (#E8453C), golden (#F4A236), cream (#FDF6F0), dark brown (#2D1B14).\nThe post should prominently feature the hook text and look premium but friendly. Include a small "follow for daily tiffin ideas" text at bottom.`;
+    default: return t;
+  }
+}
+
+async function callAgent(agentId, topic, postType, customTopic, prev, onStream, apiKey, signal) {
+  const isDesigner = agentId === "designer";
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?alt=sse&key=${apiKey}`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      systemInstruction: { parts: [{ text: SYSTEM_PROMPTS[agentId] }] },
+      contents: [{ role: "user", parts: [{ text: buildUserPrompt(agentId, topic, postType, customTopic, prev) }] }],
+      generationConfig: { maxOutputTokens: isDesigner ? 8000 : 2000, temperature: 0.8 },
+    }),
+    signal,
+  });
+
+  if (!res.ok) { const e = await res.text(); throw new Error(`API ${res.status}: ${e.slice(0,200)}`); }
+
+  const reader = res.body.getReader();
+  const dec = new TextDecoder();
+  let full = "", buf = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += dec.decode(value, { stream: true });
+    const lines = buf.split("\n");
+    buf = lines.pop() || "";
+    for (const line of lines) {
+      if (line.startsWith("data: ")) {
+        const d = line.slice(6).trim();
+        if (!d || d === "[DONE]") continue;
+        try {
+          const p = JSON.parse(d);
+          const parts = p.candidates?.[0]?.content?.parts;
+          if (parts) { for (const part of parts) { if (part.text) { full += part.text; onStream(full); } } }
+        } catch {}
+      }
+    }
+  }
+
+  if (isDesigner) return full;
+  try { return JSON.parse(full.replace(/```json|```/g, "").trim()); }
+  catch { return { raw: full }; }
+}
+
+/* ══════════════════════════════════════════════════════════
+   SMALL COMPONENTS
+   ══════════════════════════════════════════════════════════ */
+
+function CopyButton({ text, label }) {
+  const [c, setC] = useState(false);
+  return (
+    <button className={`copy-btn ${c ? "copied" : ""}`}
+      onClick={() => { navigator.clipboard.writeText(text); setC(true); setTimeout(() => setC(false), 2000); }}>
+      {c ? "✓ Copied!" : label}
+    </button>
+  );
+}
+
+function ProgressBar({ current, total }) {
+  return (
+    <div className="progress-box">
+      <div className="progress-header">
+        <span className="progress-label">Pipeline Progress</span>
+        <span className="progress-count">{current}/{total} agents complete</span>
+      </div>
+      <div className="progress-track">
+        <div className="progress-fill" style={{ width: `${total > 0 ? (current / total) * 100 : 0}%` }} />
+      </div>
+    </div>
+  );
+}
+
+/* ── Agent Card ── */
+function AgentCard({ agent, status, isActive, onRegenerate, canRegenerate }) {
+  const cls = isActive ? "active" : status === "done" ? "done" : status === "error" ? "error" : "";
+  return (
+    <div className={`agent-card ${cls}`} style={{ "--agent-color": agent.color }}>
+      <div className="agent-icon">
+        {status === "done" ? "✓" : status === "error" ? "✗" : agent.icon}
+      </div>
+      <div style={{ flex: 1 }}>
+        <div className="agent-name">{agent.name}</div>
+        <div className="agent-status">
+          {status === "done" ? "Complete" : isActive ? "Working..." : status === "error" ? "Failed" : "Waiting"}
+        </div>
+      </div>
+      {isActive && <div className="agent-dot" style={{ background: agent.color }} />}
+      {canRegenerate && status === "done" && (
+        <button className="regen-btn" title="Regenerate" style={{ "--agent-color": agent.color }}
+          onClick={e => { e.stopPropagation(); onRegenerate(agent.id); }}>↻</button>
+      )}
+    </div>
+  );
+}
+
+/* ── Strategy Panel ── */
+function StrategyPanel({ data, stream, isStreaming }) {
+  if (isStreaming && !data) return <pre className="stream-pre">{stream || "Starting..."}</pre>;
+  if (!data || data.raw) return <pre className="stream-pre">{data?.raw || "Parsing..."}</pre>;
+  const items = [
+    ["🎣","Hook",data.hook],["🔄","Unique Angle",data.angle],["💖","Emotion Trigger",data.emotion],
+    ["📐","Format",data.format_advice],["📲","Viral Trigger",data.viral_trigger],
+    ["👩","Target Persona",data.target_persona],["👉","CTA Direction",data.cta_direction],
+  ];
+  return <div>{items.map(([ic,lb,v],i)=>v&&<div key={i} className="strategy-item"><span className="strategy-icon">{ic}</span><div><span className="strategy-label">{lb}: </span><span className="strategy-val">{v}</span></div></div>)}</div>;
+}
+
+/* ── Caption Panel ── */
+function CaptionPanel({ data, stream, isStreaming }) {
+  if (isStreaming && !data) return <pre className="stream-pre">{stream || "Starting..."}</pre>;
+  if (!data || data.raw) return <pre className="stream-pre">{data?.raw || "Parsing..."}</pre>;
+
+  const full = `${data.hook_line||""}\n\n${(data.caption_body||"").replace(/\\n/g,"\n")}\n\n${data.cta||""}`;
+  const len = full.length;
+  const cc = len > IG_CHAR_LIMIT ? "char-red" : len > IG_CHAR_LIMIT*0.9 ? "char-amber" : "char-green";
+
+  return (
+    <div style={{ display: "grid", gap: 16 }}>
+      <div>
+        <div className="section-title" style={{ color: "#E8453C" }}>Hook Line</div>
+        <div style={{ fontSize: 18, fontWeight: 700, lineHeight: 1.3 }}>{data.hook_line}</div>
+        {data.alt_hooks && <div className="alt-hooks">Alternatives: {data.alt_hooks.join(" · ")}</div>}
+      </div>
+      <div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+          <div className="section-title" style={{ color: "#F4A236", marginBottom: 0 }}>Caption</div>
+          <div className={`char-counter ${cc}`}>
+            {len > IG_CHAR_LIMIT && "⚠️ "}
+            {len.toLocaleString()} / {IG_CHAR_LIMIT.toLocaleString()} chars
+          </div>
+        </div>
+        <div className="caption-box" style={{ borderColor: len > IG_CHAR_LIMIT ? "#fecaca" : "#e7e5e4" }}>
+          {data.caption_body?.replace(/\\n/g, "\n")}
+          {data.cta && <div className="caption-cta">{data.cta}</div>}
+        </div>
+      </div>
+      {data.reel_script && (
+        <div>
+          <div className="section-title" style={{ color: "#6B5CE7" }}>Reel Voiceover Script</div>
+          <div className="reel-box">🎙️ {data.reel_script}</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Hashtag Panel ── */
+function HashtagPanel({ data, stream, isStreaming }) {
+  if (isStreaming && !data) return <pre className="stream-pre">{stream || "Starting..."}</pre>;
+  if (!data || data.raw) return <pre className="stream-pre">{data?.raw || "Parsing..."}</pre>;
+
+  const TagGroup = ({ label, tags, color }) => tags?.length > 0 && (
+    <div className="tag-group">
+      <div className="section-title" style={{ color, marginBottom: 8 }}>{label}</div>
+      <div className="tag-wrap">
+        {tags.map((t,i) => <span key={i} className="tag-chip" style={{ background: `${color}14`, color, border: `1px solid ${color}30` }}>#{t.replace(/^#/,"")}</span>)}
+      </div>
+    </div>
+  );
+
+  return (
+    <div>
+      <TagGroup label="Primary (High Volume)" tags={data.primary_hashtags} color="#E8453C" />
+      <TagGroup label="Niche (Medium)" tags={data.niche_hashtags} color="#F4A236" />
+      <TagGroup label="Micro (Low Competition)" tags={data.micro_hashtags} color="#4CAF7D" />
+      {data.branded_hashtag && (
+        <div className="tag-group">
+          <div className="section-title" style={{ color: "#6B5CE7", marginBottom: 8 }}>Your Branded Tag</div>
+          <span className="branded-tag" style={{ background: "#6B5CE714", color: "#6B5CE7", border: "1px solid #6B5CE730" }}>
+            #{data.branded_hashtag.replace(/^#/,"")}
+          </span>
+        </div>
+      )}
+      {data.location_tags && (
+        <div className="tag-group">
+          <div className="section-title" style={{ color: "#78716c", marginBottom: 8 }}>Location Tags</div>
+          <div className="location-wrap">{data.location_tags.map((t,i) => <span key={i} className="location-tag">📍 {t}</span>)}</div>
+        </div>
+      )}
+      {data.posting_notes && <div className="posting-note">💡 {data.posting_notes}</div>}
+    </div>
+  );
+}
+
+/* ── Design Panel ── */
+function DesignPanel({ svgData, stream, isStreaming }) {
+  if (isStreaming && !svgData) return <div style={{ fontSize: 13, color: "#a8a29e" }}>Generating design... ({(stream||"").length} chars)</div>;
+  if (!svgData) return null;
+  const clean = svgData.replace(/```[a-z]*|```/gi,"").trim();
+  const s = clean.indexOf("<svg"), e = clean.lastIndexOf("</svg>");
+  if (s === -1 || e === -1) return <div style={{ color: "#ef4444", fontSize: 13 }}>Design generation in progress...</div>;
+  const svg = clean.substring(s, e + 6);
+
+  const dlPNG = () => {
+    const c = document.createElement("canvas"); c.width=1080; c.height=1080;
+    const ctx = c.getContext("2d"); const img = new Image();
+    const b = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
+    const u = URL.createObjectURL(b);
+    img.onload = () => { ctx.drawImage(img,0,0,1080,1080); URL.revokeObjectURL(u);
+      c.toBlob(bl => { const pu=URL.createObjectURL(bl); const a=document.createElement("a"); a.href=pu; a.download="instagram_post_1080x1080.png"; a.click(); URL.revokeObjectURL(pu); }, "image/png"); };
+    img.src = u;
+  };
+
+  return (
+    <div className="design-center">
+      <div className="svg-frame" dangerouslySetInnerHTML={{ __html: svg }} />
+      <div className="design-actions">
+        <button className="dl-svg-btn" onClick={() => { const b=new Blob([svg],{type:"image/svg+xml"}); const u=URL.createObjectURL(b); const a=document.createElement("a"); a.href=u; a.download="instagram_post.svg"; a.click(); URL.revokeObjectURL(u); }}>
+          ⬇ Download SVG
+        </button>
+        <button className="dl-png-btn" onClick={dlPNG}>🖼️ Download PNG (1080×1080)</button>
+      </div>
+    </div>
+  );
+}
+
+/* ── API Key Input ── */
+function ApiKeyInput({ apiKey, setApiKey }) {
+  const [vis, setVis] = useState(false);
+  return (
+    <div className={`api-key-box ${apiKey ? "set" : "empty"}`}>
+      <div className="api-key-label">
+        <span>🔑 Google Gemini API Key <span style={{ fontSize: 10, fontWeight: 500, color: "#22c55e" }}>(FREE)</span></span>
+        {apiKey && <span style={{ color: "#22c55e" }}>✓ Key set</span>}
+      </div>
+      <div className="api-key-row">
+        <input className="api-key-input" type={vis?"text":"password"} value={apiKey}
+          onChange={e => setApiKey(e.target.value.trim())} placeholder="AIzaSy..." />
+        <button className="api-key-toggle" onClick={() => setVis(!vis)}>{vis ? "🙈" : "👁️"}</button>
+      </div>
+      <div className="api-key-hint">Get a free key at <a href="https://aistudio.google.com/apikey" target="_blank" style={{ color: "#6B5CE7" }}>aistudio.google.com/apikey</a> — stored in memory only.</div>
+    </div>
+  );
+}
+
+/* ── History Panel ── */
+function HistoryPanel({ onLoad }) {
+  const [history, setHistory] = useState(loadHistory);
+  const [open, setOpen] = useState(false);
+  if (!history.length) return null;
+  return (
+    <div style={{ marginBottom: 20 }}>
+      <button className="history-toggle" onClick={() => setOpen(!open)}>
+        <span>📂 Post History ({history.length})</span>
+        <span className={`history-arrow ${open ? "open" : ""}`}>▼</span>
+      </button>
+      {open && history.map((entry, i) => (
+        <div key={i} className="history-entry">
+          <div>
+            <div className="history-entry-title">{entry.postType}</div>
+            <div className="history-entry-meta">{entry.date} · {entry.hook || "Custom post"}</div>
+          </div>
+          <div style={{ display: "flex", gap: 6 }}>
+            <button className="history-btn history-load" onClick={() => onLoad(entry)}>Load</button>
+            <button className="history-btn history-del" onClick={() => {
+              const u = loadHistory().filter((_,j) => j !== i);
+              localStorage.setItem(HISTORY_KEY, JSON.stringify(u));
+              setHistory(u);
+            }}>✕</button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════
+   MAIN APP
+   ══════════════════════════════════════════════════════════ */
+
+function App() {
+  const [apiKey, setApiKey]             = useState("");
+  const [postType, setPostType]         = useState("tiffin");
+  const [customTopic, setCustomTopic]   = useState("");
+  const [running, setRunning]           = useState(false);
+  const [currentAgent, setCurrentAgent] = useState(null);
+  const [statuses, setStatuses]         = useState({});
+  const [results, setResults]           = useState({});
+  const [streams, setStreams]           = useState({});
+  const [error, setError]               = useState(null);
+  const [activeTab, setActiveTab]       = useState("strategist");
+  const [done, setDone]                 = useState(0);
+  const abortRef = useRef(null);
+
+  const topic = postType === "custom" ? customTopic : (TOPIC_MAP[postType] || "");
+
+  /* ── Cancel ── */
+  const handleCancel = useCallback(() => {
+    abortRef.current?.abort(); abortRef.current = null;
+    setRunning(false); setCurrentAgent(null);
+  }, []);
+
+  /* ── Regenerate Single Agent ── */
+  const regenerateAgent = useCallback(async (id) => {
+    if (running) return;
+    setRunning(true); setCurrentAgent(id); setActiveTab(id);
+    setStatuses(p => ({ ...p, [id]: "running" })); setError(null);
+    const ctrl = new AbortController(); abortRef.current = ctrl;
+    try {
+      if (apiKey) {
+        const r = await callAgent(id, topic, postType, customTopic, results,
+          t => setStreams(p => ({ ...p, [id]: t })), apiKey, ctrl.signal);
+        setResults(p => ({ ...p, [id]: r })); setStatuses(p => ({ ...p, [id]: "done" }));
+      } else {
+        const pt = postType === "custom" ? "custom" : postType;
+        const demoSet = DEMO_DATA[pt] || DEMO_DATA.custom;
+        await simulateAgent(id, t => setStreams(p => ({ ...p, [id]: t })), ctrl.signal);
+        const r = id === "designer" ? DEMO_SVG : demoSet[id];
+        setResults(p => ({ ...p, [id]: r })); setStatuses(p => ({ ...p, [id]: "done" }));
+      }
+    } catch (err) {
+      if (err.name !== "AbortError") { setStatuses(p => ({ ...p, [id]: "error" })); setError(`${id}: ${err.message}`); }
+    }
+    setCurrentAgent(null); setRunning(false); abortRef.current = null;
+  }, [running, apiKey, postType, customTopic, results, topic]);
+
+  /* ── Run Full Pipeline ── */
+  const isDemo = !apiKey;
+  const runPipeline = useCallback(async () => {
+    setRunning(true); setError(null); setResults({}); setStreams({}); setStatuses({});
+    setActiveTab("strategist"); setDone(0);
+    const ctrl = new AbortController(); abortRef.current = ctrl;
+    const order = ["strategist","copywriter","hashtag","designer"];
+    const col = {};
+    const pt = postType === "custom" ? "custom" : postType;
+    const demoSet = DEMO_DATA[pt] || DEMO_DATA.custom;
+    for (const id of order) {
+      if (ctrl.signal.aborted) break;
+      setCurrentAgent(id); setActiveTab(id); setStatuses(p => ({ ...p, [id]: "running" }));
+      try {
+        let r;
+        if (apiKey) {
+          r = await callAgent(id, topic, postType, customTopic, col,
+            t => setStreams(p => ({ ...p, [id]: t })), apiKey, ctrl.signal);
+        } else {
+          await simulateAgent(id, t => setStreams(p => ({ ...p, [id]: t })), ctrl.signal);
+          r = id === "designer" ? DEMO_SVG : demoSet[id];
+        }
+        col[id] = r; setResults(p => ({ ...p, [id]: r }));
+        setStatuses(p => ({ ...p, [id]: "done" })); setDone(p => p + 1);
+      } catch (err) {
+        if (err.name === "AbortError") break;
+        setStatuses(p => ({ ...p, [id]: "error" })); setError(`${id}: ${err.message}`); break;
+      }
+    }
+    if (col.strategist && !ctrl.signal.aborted)
+      saveToHistory({ date: new Date().toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric"}),
+        postType: POST_TYPES.find(p=>p.id===postType)?.label || postType,
+        hook: col.strategist?.hook || "", results: col });
+    setCurrentAgent(null); setRunning(false); abortRef.current = null;
+  }, [apiKey, postType, customTopic, topic]);
+
+  /* ── Load History ── */
+  const loadFromHistory = useCallback((entry) => {
+    setResults(entry.results || {});
+    setStatuses(Object.fromEntries(Object.keys(entry.results || {}).map(k => [k,"done"])));
+    setStreams({}); setError(null); setActiveTab("strategist");
+    setDone(Object.keys(entry.results || {}).length);
+  }, []);
+
+  const hasResults = Object.keys(results).length > 0;
+  const allDone = AGENTS.every(a => statuses[a.id] === "done");
+
+  /* ── Build combined text for copy-all ── */
+  const getCombined = () => {
+    const c = results.copywriter || {}, h = results.hashtag || {};
+    const cap = `${c.hook_line||""}\n\n${(c.caption_body||"").replace(/\\n/g,"\n")}\n\n${c.cta||""}`;
+    const tags = [...(h.primary_hashtags||[]),...(h.niche_hashtags||[]),...(h.micro_hashtags||[])].map(t=>`#${t.replace(/^#/,"")}`).join(" ");
+    return `${cap.trim()}\n\n.\n.\n.\n\n${tags}`;
+  };
+
+  /* ── Download All ── */
+  const downloadAll = () => {
+    const s=results.strategist||{}, c=results.copywriter||{}, h=results.hashtag||{};
+    const txt = `═══════════════════════════════════════
+  INSTAGRAM POST — COMPLETE PACKAGE
+  Generated by Multi-Agent AI System
+  ${new Date().toLocaleDateString("en-IN",{day:"numeric",month:"long",year:"numeric"})}
+═══════════════════════════════════════
+
+━━━ 🎯 CONTENT STRATEGY ━━━━━━━━━━━━━
+Hook: ${s.hook||"N/A"}
+Angle: ${s.angle||"N/A"}
+Emotion: ${s.emotion||"N/A"}
+Format: ${s.format_advice||"N/A"}
+Viral Trigger: ${s.viral_trigger||"N/A"}
+Target Persona: ${s.target_persona||"N/A"}
+CTA Direction: ${s.cta_direction||"N/A"}
+
+━━━ ✍️ CAPTION (Copy & Paste Ready) ━━━
+${c.hook_line||""}
+
+${(c.caption_body||"").replace(/\\n/g,"\n")}
+
+${c.cta||""}
+
+Alternative Hooks:
+${(c.alt_hooks||[]).map((x,i)=>`  ${i+1}. ${x}`).join("\n")}
+
+━━━ 🎙️ REEL VOICEOVER SCRIPT ━━━━━━━━
+${c.reel_script||"N/A"}
+
+━━━ #️⃣ HASHTAGS (Copy & Paste Ready) ━━
+PRIMARY: ${(h.primary_hashtags||[]).map(t=>`#${t.replace(/^#/,"")}`).join(" ")}
+NICHE: ${(h.niche_hashtags||[]).map(t=>`#${t.replace(/^#/,"")}`).join(" ")}
+MICRO: ${(h.micro_hashtags||[]).map(t=>`#${t.replace(/^#/,"")}`).join(" ")}
+BRANDED: #${(h.branded_hashtag||"").replace(/^#/,"")}
+
+ALL HASHTAGS:
+${[...(h.primary_hashtags||[]),...(h.niche_hashtags||[]),...(h.micro_hashtags||[])].map(t=>`#${t.replace(/^#/,"")}`).join(" ")}
+
+LOCATION TAGS: ${(h.location_tags||[]).join(", ")}
+NOTE: ${h.posting_notes||"N/A"}
+
+━━━ 📋 POSTING CHECKLIST ━━━━━━━━━━━━━
+☐ Post visual / Reel ready
+☐ Caption copied & pasted
+☐ Hashtags in first comment
+☐ Location tag added
+☐ Posted between 7-8 AM or 8-9 PM IST
+☐ Shared to 3-5 WhatsApp mom groups
+☐ Reply to comments within first hour
+
+═══════════════════════════════════════
+  Powered by Claude Multi-Agent System
+═══════════════════════════════════════`;
+    const blob = new Blob([txt],{type:"text/plain;charset=utf-8"});
+    const u = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href=u;
+    a.download = `instagram_post_${new Date().toISOString().slice(0,10)}.txt`;
+    a.click(); URL.revokeObjectURL(u);
+  };
+
+  /* ══════════════════════════════════════════════════════════
+     RENDER
+     ══════════════════════════════════════════════════════════ */
+
+  return (
+    <div>
+      {/* Header */}
+      <div className="header">
+        <div className="header-badge">⚡ Multi-Agent AI System</div>
+        <h1>Instagram Post Factory</h1>
+        <p>4 AI agents collaborate to create your complete, ready-to-post Instagram content</p>
+      </div>
+
+      <div className="container">
+        {/* API Key */}
+        <ApiKeyInput apiKey={apiKey} setApiKey={setApiKey} />
+
+        {/* History */}
+        <HistoryPanel onLoad={loadFromHistory} />
+
+        {/* Post Type */}
+        <div style={{ marginBottom: 24 }}>
+          <div className="section-label">Choose Post Type</div>
+          <div className="post-grid">
+            {POST_TYPES.map(pt => (
+              <button key={pt.id}
+                className={`post-btn ${postType===pt.id?"active":""} ${running?"disabled":""}`}
+                onClick={() => !running && setPostType(pt.id)}>
+                <div className="post-btn-label">{pt.label}</div>
+                <div className="post-btn-desc">{pt.desc}</div>
+              </button>
+            ))}
+          </div>
+          {postType === "custom" && (
+            <input className="custom-input" value={customTopic}
+              onChange={e => setCustomTopic(e.target.value)} placeholder="Enter your post topic in detail..." />
+          )}
+        </div>
+
+        {/* Agent Cards */}
+        <div className="agent-grid">
+          {AGENTS.map(a => (
+            <AgentCard key={a.id} agent={a} status={statuses[a.id]}
+              isActive={currentAgent===a.id} onRegenerate={regenerateAgent}
+              canRegenerate={!running && allDone} />
+          ))}
+        </div>
+
+        {/* Progress */}
+        {running && <ProgressBar current={done} total={AGENTS.length} />}
+
+        {/* Generate / Cancel */}
+        <button
+          className={`generate-btn ${running ? "running" : "ready"}`}
+          onClick={running ? handleCancel : runPipeline}
+          disabled={!running && postType==="custom" && !customTopic.trim()}>
+          {running ? `⏹ Cancel — ${AGENTS.find(a=>a.id===currentAgent)?.name||"Agent"} working...`
+           : apiKey ? "🚀 Generate Instagram Post"
+           : "✨ Try Demo (No API Key Needed!)"}
+        </button>
+
+        {/* Error */}
+        {error && <div className="error-box"><div className="error-text">{error}</div></div>}
+
+        {/* Results */}
+        {hasResults && (
+          <div style={{ animation: "slideUp 0.4s ease-out" }}>
+            {/* Tabs */}
+            <div className="tab-bar">
+              {AGENTS.map(a => (
+                <button key={a.id} className={`tab-btn ${activeTab===a.id?"active":""}`}
+                  style={{ "--tab-color": a.color }} onClick={() => setActiveTab(a.id)}>
+                  {a.icon} {a.name.replace(" Agent","")}
+                </button>
+              ))}
+            </div>
+
+            {/* Tab Content */}
+            <div className="tab-content">
+              {activeTab === "strategist" && <>
+                <div className="tab-header">
+                  <h3 className="tab-title">🎯 Content Strategy</h3>
+                  {results.strategist && !results.strategist.raw && <CopyButton text={JSON.stringify(results.strategist,null,2)} label="📋 Copy JSON" />}
+                </div>
+                <StrategyPanel data={results.strategist} stream={streams.strategist} isStreaming={currentAgent==="strategist"} />
+              </>}
+
+              {activeTab === "copywriter" && <>
+                <div className="tab-header">
+                  <h3 className="tab-title">✍️ Caption & Copy</h3>
+                  {results.copywriter && !results.copywriter.raw && (
+                    <CopyButton text={`${results.copywriter.hook_line}\n\n${(results.copywriter.caption_body||"").replace(/\\n/g,"\n")}\n\n${results.copywriter.cta||""}`} label="📋 Copy Caption" />
+                  )}
+                </div>
+                <CaptionPanel data={results.copywriter} stream={streams.copywriter} isStreaming={currentAgent==="copywriter"} />
+              </>}
+
+              {activeTab === "hashtag" && <>
+                <div className="tab-header">
+                  <h3 className="tab-title">#️⃣ Hashtag Strategy</h3>
+                  {results.hashtag && !results.hashtag.raw && (
+                    <CopyButton text={[...(results.hashtag.primary_hashtags||[]),...(results.hashtag.niche_hashtags||[]),...(results.hashtag.micro_hashtags||[])].map(t=>`#${t.replace(/^#/,"")}`).join(" ")} label="📋 Copy All Tags" />
+                  )}
+                </div>
+                <HashtagPanel data={results.hashtag} stream={streams.hashtag} isStreaming={currentAgent==="hashtag"} />
+              </>}
+
+              {activeTab === "designer" && <>
+                <h3 className="tab-title" style={{ marginBottom: 16 }}>🎨 Post Design</h3>
+                <DesignPanel svgData={results.designer} stream={streams.designer} isStreaming={currentAgent==="designer"} />
+                {!results.designer && currentAgent!=="designer" && !streams.designer && (
+                  <div style={{ fontSize: 13, color: "#a8a29e" }}>Waiting for previous agents...</div>
+                )}
+              </>}
+            </div>
+
+            {/* Bottom Actions */}
+            {allDone && (
+              <div style={{ marginTop: 24, animation: "slideUp 0.4s ease-out" }}>
+                {results.copywriter && results.hashtag && <CopyButton text={getCombined()} label="📋 Copy Caption + Hashtags (Instagram-Ready)" />}
+                {results.copywriter && results.hashtag && <div style={{marginTop:10}} />}
+                <button className="download-all-btn" onClick={downloadAll}>⬇ Download Complete Post Package (.txt)</button>
+                <p className="download-note">Strategy, caption, hashtags, Reel script & posting checklist</p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
