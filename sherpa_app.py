@@ -44,8 +44,8 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 # CONFIG
 # =============================================================================
 
-MODEL_HEAVY = "claude-3-5-sonnet-20241022"     # Deep reasoning
-MODEL_LIGHT = "claude-3-5-haiku-20241022"      # Formatting, quick tasks
+MODEL_HEAVY = "claude-3-5-sonnet-20240620"     # Deep reasoning
+MODEL_LIGHT = "claude-3-haiku-20240307"        # Formatting, quick tasks
 DB_PATH     = "eagle.db"
 OPENALEX    = "https://api.openalex.org/works"
 
