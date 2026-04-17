@@ -806,9 +806,18 @@ def get_client() -> Anthropic:
 
 def claude_call(system: str, user: str, model: str = MODEL_HEAVY, max_tokens: int = 4000) -> str:
     client = get_client()
-        messages=[{"role": "user", "content": user}],
-    )
-    return resp.content[0].text
+    try:
+        resp = client.messages.create(
+            model=model,
+            system=system,
+            max_tokens=max_tokens,
+            messages=[{"role": "user", "content": user}],
+        )
+        return resp.content[0].text
+    except Exception as e:
+        st.error(f"**Anthropic API Error:** {str(e)}")
+        st.info(f"Model ID used: {model}")
+        st.stop()
 
 def claude_json(system: str, user: str, model: str = MODEL_HEAVY, max_tokens: int = 8000) -> dict:
     raw = claude_call(system, user, model=model, max_tokens=max_tokens)
