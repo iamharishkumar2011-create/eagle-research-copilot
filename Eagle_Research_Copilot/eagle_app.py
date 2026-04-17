@@ -805,6 +805,9 @@ def get_client() -> Anthropic:
     return Anthropic(api_key=key.strip())
 
 def claude_call(system: str, user: str, model: str = MODEL_HEAVY, max_tokens: int = 4000) -> str:
+    custom_model = st.session_state.get("custom_model")
+    if custom_model and custom_model.strip():
+        model = custom_model.strip()
     client = get_client()
     try:
         resp = client.messages.create(
@@ -1821,6 +1824,13 @@ with st.sidebar:
     st.session_state.faculty_id = st.text_input(
         "Faculty email",
         value=st.session_state.faculty_id or "harish@glim.ac.in",
+        label_visibility="collapsed",
+    )
+    
+    st.session_state.custom_model = st.text_input(
+        "Model override",
+        value=st.session_state.get("custom_model", ""),
+        placeholder="Override Model ID (e.g. claude-3-haiku-20240307)",
         label_visibility="collapsed",
     )
 
