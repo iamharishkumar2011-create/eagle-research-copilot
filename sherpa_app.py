@@ -1810,7 +1810,7 @@ with st.sidebar:
     st.session_state.anthropic_api_key = st.text_input(
         "API key", type="password",
         value=st.session_state.anthropic_api_key,
-        placeholder="sk-ant-…",
+        placeholder="API key (optional — leave blank for free tier)",
         label_visibility="collapsed",
     )
     st.session_state.faculty_id = st.text_input(
