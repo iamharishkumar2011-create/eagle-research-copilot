@@ -806,10 +806,6 @@ def get_client() -> Anthropic:
 
 def claude_call(system: str, user: str, model: str = MODEL_HEAVY, max_tokens: int = 4000) -> str:
     client = get_client()
-    resp = client.messages.create(
-        model=model,
-        max_tokens=max_tokens,
-        system=system,
         messages=[{"role": "user", "content": user}],
     )
     return resp.content[0].text
