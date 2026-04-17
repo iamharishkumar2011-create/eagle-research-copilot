@@ -802,7 +802,7 @@ def get_client() -> Anthropic:
     if not key:
         st.error("Enter your Anthropic API key in the sidebar to continue.")
         st.stop()
-    return Anthropic(api_key=key)
+    return Anthropic(api_key=key.strip())
 
 def claude_call(system: str, user: str, model: str = MODEL_HEAVY, max_tokens: int = 4000) -> str:
     client = get_client()
