@@ -32,8 +32,8 @@ from docx.shared import Pt, RGBColor, Inches
 # CONFIG
 # ---------------------------------------------------------------------------
 
-MODEL_HEAVY = "claude-3-sonnet-20240229"   # Problematizer, Theorist, Reviewer
-MODEL_LIGHT = "claude-3-haiku-20240307"  # Lit scout formatting, method items
+MODEL_HEAVY = "claude-3-5-sonnet-latest"   # Problematizer, Theorist, Reviewer
+MODEL_LIGHT = "claude-3-5-haiku-latest"    # Lit scout formatting, method items
 import os
 _is_cloud = os.environ.get("STREAMLIT_SERVER_HEADLESS") or os.environ.get("HOME", "").startswith("/home/appuser")
 DB_PATH = "/tmp/eagle.db" if _is_cloud else "eagle.db"
