@@ -223,22 +223,36 @@ def reconstruct_abstract(inv_idx: dict | None) -> str:
 # CLAUDE CALLS
 # ---------------------------------------------------------------------------
 
-def claude_call(system: str, user: str, model: str = MODEL_HEAVY, max_tokens: int = 3000, return_meta: bool = False):
+def get_client() -> Anthropic:
     api_key = st.session_state.get("anthropic_api_key", "").strip()
+    if not api_key:
+        try:
+            api_key = st.secrets.get("ANTHROPIC_API_KEY", "").strip()
+        except:
+            pass
+    if not api_key:
+        api_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
     if not api_key:
         st.error("Please enter your Anthropic API key in the sidebar.")
         st.stop()
-    client = Anthropic(api_key=api_key)
-    resp = client.messages.create(
-        model=model,
-        max_tokens=max_tokens,
-        system=system,
-        messages=[{"role": "user", "content": user}],
-    )
-    text = resp.content[0].text if resp.content else ""
-    if return_meta:
-        return text, resp.stop_reason
-    return text
+    return Anthropic(api_key=api_key)
+def claude_call(system: str, user: str, model: str = MODEL_HEAVY, max_tokens: int = 4000, return_meta: bool = False):
+    client = get_client()
+    try:
+        resp = client.messages.create(
+            model=model,
+            max_tokens=max_tokens,
+            system=system,
+            messages=[{"role": "user", "content": user}],
+        )
+        text = resp.content[0].text if resp.content else ""
+        if return_meta:
+            return text, resp.stop_reason
+        return text
+    except Exception as e:
+        st.error(f"**Anthropic API Error:** {str(e)}")
+        st.info(f"Model ID used: {model}")
+        st.stop()
 
 def _extract_json(raw: str) -> dict:
     """Try multiple strategies to extract JSON from Claude's response."""
@@ -267,7 +281,7 @@ def _extract_json(raw: str) -> dict:
             pass
     raise json.JSONDecodeError("No valid JSON found", cleaned, 0)
 
-def claude_json(system: str, user: str, model: str = MODEL_HEAVY, max_retries: int = 2, max_tokens: int = 8192) -> dict:
+def claude_json(system: str, user: str, model: str = MODEL_HEAVY, max_retries: int = 2, max_tokens: int = 4000) -> dict:
     """Call Claude and parse JSON from the response. Retries on failure."""
     last_raw = ""
     for attempt in range(max_retries + 1):
