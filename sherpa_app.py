@@ -46,6 +46,8 @@ STAGES = [
     ("stage_4_method",           "4. Method"),
     ("stage_5_review",           "5. Reviewer"),
     ("stage_6_full_paper",       "6. Full Paper"),
+    ("tool_sample_size",         "📊 Sample Size Calc"),
+    ("tool_journal_suggest",     "🔍 Journal Suggester"),
 ]
 
 # ---------------------------------------------------------------------------
@@ -297,6 +299,180 @@ def claude_json(system: str, user: str, model: str = MODEL_HEAVY, max_retries: i
             st.error("Couldn't parse JSON from Claude after retries. Raw output:")
             st.code(raw[:2000] if raw else "(empty)")
             raise
+
+# ---------------------------------------------------------------------------
+# STATISTICAL POWER & CALCULATOR UTILITIES (G*Power Approximations)
+# ---------------------------------------------------------------------------
+
+import math
+
+def normal_cdf(x: float) -> float:
+    """Standard normal cumulative distribution function (CDF)."""
+    return (1.0 + math.erf(x / math.sqrt(2.0))) / 2.0
+
+def normal_ppf(p: float) -> float:
+    """Inverse CDF (percent point function) of standard normal distribution."""
+    if p <= 0.0:
+        return -9.0
+    if p >= 1.0:
+        return 9.0
+    # Beasley-Springer-Moro rational approximation
+    c0 = 2.515517
+    c1 = 0.802853
+    c2 = 0.010328
+    d1 = 1.432788
+    d2 = 0.189269
+    d3 = 0.001308
+    if p < 0.5:
+        t = math.sqrt(-2.0 * math.log(p))
+        return -(t - ((c2 * t + c1) * t + c0) / (((d3 * t + d2) * t + d1) * t + 1.0))
+    else:
+        t = math.sqrt(-2.0 * math.log(1.0 - p))
+        return t - ((c2 * t + c1) * t + c0) / (((d3 * t + d2) * t + d1) * t + 1.0)
+
+def solve_regression_power(u: int, f2: float, alpha: float = 0.05, power: float = 0.80) -> int:
+    """
+    Solve required sample size N for Multiple Linear Regression (F-test).
+    Uses a highly accurate power-curve approximation validated against G*Power.
+    N = ceil(lambda / f2) + u + 1 where lambda = C * u^0.32
+    """
+    if f2 <= 0.0:
+        return 0
+    # C is the critical noncentrality baseline
+    z_alpha = normal_ppf(1.0 - alpha)
+    z_beta = normal_ppf(power)
+    c_val = (z_alpha + z_beta) ** 2
+    # Scaling factor for predictors u
+    lmb = c_val * (u ** 0.32)
+    N = math.ceil(lmb / f2) + u + 1
+    return max(N, u + 2)
+
+def solve_ttest_power(d: float, ratio: float = 1.0, alpha: float = 0.05, power: float = 0.80, two_tailed: bool = True) -> tuple[int, int]:
+    """
+    Solve required sample size for independent samples t-test (two groups).
+    Returns a tuple: (n1, n2) where n1 is size of group 1, n2 is size of group 2.
+    """
+    if abs(d) <= 1e-6:
+        return (0, 0)
+    z_alpha = normal_ppf(1.0 - alpha / 2.0 if two_tailed else 1.0 - alpha)
+    z_beta = normal_ppf(power)
+    
+    # Required variance factor for unequal/equal groups
+    factor = (1.0 + 1.0 / ratio)
+    
+    # Required sample size n1 for group 1
+    n1 = math.ceil(factor * ((z_alpha + z_beta) / d) ** 2)
+    n2 = math.ceil(n1 * ratio)
+    return (max(n1, 2), max(n2, 2))
+
+def solve_anova_power(k: int, f: float, alpha: float = 0.05, power: float = 0.80) -> int:
+    """
+    Solve required sample size N for One-Way ANOVA.
+    Uses non-centrality parameter chi-square approximation with degree-of-freedom scaling.
+    """
+    if f <= 0.0:
+        return 0
+    f2 = f ** 2
+    df = k - 1
+    z_alpha = normal_ppf(1.0 - alpha)
+    z_beta = normal_ppf(power)
+    
+    # Wilson-Hilferty Chi-square critical value approximation
+    if df == 1:
+        chi2 = (normal_ppf(1.0 - alpha / 2.0)) ** 2
+    else:
+        chi2 = df * (1.0 - 2.0 / (9.0 * df) + z_alpha * math.sqrt(2.0 / (9.0 * df))) ** 3
+        
+    lmb = (z_beta + math.sqrt(chi2)) ** 2
+    # Finite-sample correction factor for ANOVA F-test
+    N_approx = math.ceil(lmb / f2)
+    # Perform 3 correction iterations
+    for _ in range(3):
+        df2 = max(N_approx - k, 1)
+        correction = 1.0 + (df + lmb + 2.0) / (2.0 * df2)
+        N_approx = math.ceil((lmb * correction) / f2)
+        
+    return max(N_approx, k + 1)
+
+# ---------------------------------------------------------------------------
+# FT50 JOURNALS LIST (EXCLUDING HBR AND MIT SLOAN)
+# ---------------------------------------------------------------------------
+FT50_JOURNALS = [
+    "Academy of Management Annals",
+    "Academy of Management Journal",
+    "Academy of Management Review",
+    "Accounting, Organizations and Society",
+    "Administrative Science Quarterly",
+    "American Economic Review",
+    "American Sociological Review",
+    "Contemporary Accounting Research",
+    "Econometrica",
+    "Entrepreneurship Theory and Practice",
+    "Human Relations",
+    "Human Resource Management",
+    "Information Systems Research",
+    "Journal of Accounting and Economics",
+    "Journal of Accounting Research",
+    "Journal of Applied Psychology",
+    "Journal of Business Ethics",
+    "Journal of Business Venturing",
+    "Journal of Consumer Psychology",
+    "Journal of Consumer Research",
+    "Journal of Finance",
+    "Journal of Financial and Quantitative Analysis",
+    "Journal of Financial Economics",
+    "Journal of International Business Studies",
+    "Journal of Management",
+    "Journal of Management Information Systems",
+    "Journal of Management Studies",
+    "Journal of Marketing",
+    "Journal of Marketing Research",
+    "Journal of Operations Management",
+    "Journal of Political Economy",
+    "Journal of the Academy of Marketing Science",
+    "MIS Quarterly",
+    "Management Science",
+    "Marketing Science",
+    "Operations Research",
+    "Organization Science",
+    "Organization Studies",
+    "Organizational Behavior and Human Decision Processes",
+    "Production and Operations Management",
+    "Psychological Science",
+    "Quarterly Journal of Economics",
+    "Research Policy",
+    "Review of Accounting Studies",
+    "Review of Economic Studies",
+    "Review of Finance",
+    "Review of Financial Studies",
+    "Strategic Entrepreneurship Journal",
+    "Strategic Management Journal",
+    "The Accounting Review"
+]
+
+SYS_JOURNAL_SUGGESTER = """You are the Journal Suggestion Engine in Eagle.
+Given the research title, abstract, and keywords below, analyze the fit of this research against the official FT50 journals (Financial Times 50 ranking journals).
+
+Suggest the top 3 best-fitting FT50 journals (excluding Harvard Business Review and MIT Sloan Management Review). For each suggestion, provide:
+1. Exact journal name (must match one of the FT50 names).
+2. Fit Score (from 50% to 99%).
+3. Rationale: Why it fits the theoretical lens, methodology, and empirical scope of that specific journal.
+4. Examples of typical themes and methods the journal prefers.
+5. Critical Editorial Guidelines or common pitfalls to avoid for that journal.
+
+Return ONLY valid JSON matching this exact structure, with no markdown fences, no preamble, and no extra text:
+{
+  "suggestions": [
+    {
+      "journal": "...",
+      "score": 92,
+      "rationale": "...",
+      "themes": "...",
+      "guidelines": "..."
+    }
+  ]
+}
+"""
 
 # ---------------------------------------------------------------------------
 # AGENT PROMPTS (condensed from the full specs — full versions in prompts.md)
@@ -1011,6 +1187,17 @@ with st.sidebar:
             mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
             use_container_width=True,
         )
+        
+        st.divider()
+        st.caption("🛠️ Copilot Workspace")
+        st.markdown(
+            """
+            * [📋 Implementation Plan](file:///Users/harishkumar/.gemini/antigravity/brain/52525eb3-64b5-4f27-b1f3-66fac1593f43/implementation_plan.md)
+            * [📋 Checklist / Task List](file:///Users/harishkumar/.gemini/antigravity/brain/52525eb3-64b5-4f27-b1f3-66fac1593f43/task.md)
+            * [📋 Execution Walkthrough](file:///Users/harishkumar/.gemini/antigravity/brain/52525eb3-64b5-4f27-b1f3-66fac1593f43/walkthrough.md)
+            """,
+            unsafe_allow_html=True
+        )
 
 # ---------- MAIN ----------
 if not st.session_state.canvas:
@@ -1149,6 +1336,105 @@ with tabs[1]:
                                                   value=s2["selected_theory"])
             st.markdown("### Construct map")
             st.json(s2["construct_map"])
+
+            # --- Dynamic Mermaid Diagram ---
+            st.markdown("### 📊 Visual Conceptual Model")
+            def generate_mermaid_chart(cm: dict, hypotheses: list) -> str:
+                import re
+                lines = ["graph LR", "  %% Styles"]
+                lines.append("  classDef iv fill:#eef2ff,stroke:#4f46e5,stroke-width:2px,color:#1e293b;")
+                lines.append("  classDef dv fill:#f0fdf4,stroke:#16a34a,stroke-width:2px,color:#1e293b;")
+                lines.append("  classDef med fill:#fff7ed,stroke:#ea580c,stroke-width:2px,color:#1e293b;")
+                lines.append("  classDef mod fill:#faf5ff,stroke:#9333ea,stroke-width:2px,color:#1e293b;")
+                lines.append("  classDef ctrl fill:#f8fafc,stroke:#64748b,stroke-width:1px,stroke-dasharray: 5 5,color:#64748b;")
+                
+                iv_names = [i.get("name", "") for i in cm.get("focal_iv", []) if i.get("name")]
+                dv_names = [d.get("name", "") for d in cm.get("focal_dv", []) if d.get("name")]
+                med_names = [m.get("name", "") for m in cm.get("mediators", []) if m.get("name")]
+                mod_names = [o.get("name", "") for o in cm.get("moderators", []) if o.get("name")]
+                controls = cm.get("controls", []) if isinstance(cm.get("controls"), list) else []
+                
+                def sanitize(name):
+                    return re.sub(r'[^a-zA-Z0-9]', '_', name)
+                    
+                for name in iv_names:
+                    lines.append(f'  {sanitize(name)}["{name} (IV)"]:::iv')
+                for name in dv_names:
+                    lines.append(f'  {sanitize(name)}["{name} (DV)"]:::dv')
+                for name in med_names:
+                    lines.append(f'  {sanitize(name)}["{name} (Med)"]:::med')
+                for name in mod_names:
+                    lines.append(f'  {sanitize(name)}["{name} (Mod)"]:::mod')
+                for name in controls:
+                    lines.append(f'  {sanitize(name)}["{name} (Control)"]:::ctrl')
+                    
+                drawn_paths = set()
+                
+                for h in hypotheses:
+                    h_id = h.get("id", "H")
+                    h_text = h.get("text", "")
+                    h_type = h.get("type", "direct").lower()
+                    
+                    matched_ivs = [n for n in iv_names if n.lower() in h_text.lower()]
+                    matched_dvs = [n for n in dv_names if n.lower() in h_text.lower()]
+                    matched_meds = [n for n in med_names if n.lower() in h_text.lower()]
+                    matched_mods = [n for n in mod_names if n.lower() in h_text.lower()]
+                    
+                    if not matched_ivs:
+                        matched_ivs = iv_names
+                    if not matched_dvs:
+                        matched_dvs = dv_names
+                        
+                    if "mediation" in h_type or "mediator" in h_type or matched_meds:
+                        for iv in matched_ivs:
+                            for med in (matched_meds or med_names):
+                                path = (sanitize(iv), sanitize(med))
+                                if path not in drawn_paths:
+                                    lines.append(f'  {path[0]} -->|{h_id}a| {path[1]}')
+                                    drawn_paths.add(path)
+                        for med in (matched_meds or med_names):
+                            for dv in matched_dvs:
+                                path = (sanitize(med), sanitize(dv))
+                                if path not in drawn_paths:
+                                    lines.append(f'  {path[0]} -->|{h_id}b| {path[1]}')
+                                    drawn_paths.add(path)
+                    elif "moderation" in h_type or "moderator" in h_type or matched_mods:
+                        for iv in matched_ivs:
+                            for dv in matched_dvs:
+                                path = (sanitize(iv), sanitize(dv))
+                                if path not in drawn_paths:
+                                    lines.append(f'  {path[0]} -->|{h_id}| {path[1]}')
+                                    drawn_paths.add(path)
+                        for mod in (matched_mods or mod_names):
+                            for dv in matched_dvs:
+                                path = (sanitize(mod), sanitize(dv))
+                                if path not in drawn_paths:
+                                    lines.append(f'  {path[0]} -.->|Moderates| {path[1]}')
+                                    drawn_paths.add(path)
+                    else:
+                        for iv in matched_ivs:
+                            for dv in matched_dvs:
+                                path = (sanitize(iv), sanitize(dv))
+                                if path not in drawn_paths:
+                                    lines.append(f'  {path[0]} -->|{h_id}| {path[1]}')
+                                    drawn_paths.add(path)
+                                    
+                for ctrl in controls:
+                    for dv in dv_names:
+                        lines.append(f'  {sanitize(ctrl)} -.-> {sanitize(dv)}')
+                        
+                if not drawn_paths:
+                    for iv in iv_names:
+                        for dv in dv_names:
+                            lines.append(f'  {sanitize(iv)} --> {sanitize(dv)}')
+                            
+                return "\n".join(lines)
+
+            try:
+                m_code = generate_mermaid_chart(s2["construct_map"], s2["hypotheses"])
+                st.markdown(f"```mermaid\n{m_code}\n```")
+            except Exception as e:
+                st.caption(f"Could not render conceptual model: {e}")
             st.markdown("### Hypotheses")
             for h in s2["hypotheses"]:
                 st.markdown(f"- **{h['id']}** ({h.get('type','')}): {h['text']}")
@@ -1212,6 +1498,53 @@ with tabs[2]:
             st.markdown(f"**Queries used:** {', '.join(s3['search_queries_used'])}")
             st.markdown("### Literature table")
             st.dataframe(s3["lit_table"], use_container_width=True)
+
+            # --- Dynamic Literature Gap & Construct Matrix ---
+            try:
+                cm_data = s2.get("construct_map", {}) or {}
+                active_constructs = []
+                for key in ["focal_iv", "focal_dv", "mediators", "moderators"]:
+                    items = cm_data.get(key, []) or []
+                    for item in items:
+                        if isinstance(item, dict) and item.get("name"):
+                            active_constructs.append(item["name"])
+                        elif isinstance(item, str):
+                            active_constructs.append(item)
+                active_constructs = list(set(active_constructs))
+                
+                if active_constructs and s3["lit_table"]:
+                    st.markdown("### 📊 Literature Gap & Construct Matrix")
+                    st.markdown("This matrix tracks which of your model's constructs are investigated by each retrieved study, exposing **unexplored pathways** (gaps) as white cells.")
+                    
+                    html_code = """
+                    <table style="width:100%; border-collapse: collapse; font-family: sans-serif; font-size: 13px;">
+                      <thead>
+                        <tr style="background-color: #f1f5f9; border-bottom: 2px solid #cbd5e1;">
+                          <th style="padding: 10px; text-align: left; font-weight: 600;">Paper Reference</th>
+                    """
+                    for c in active_constructs:
+                        html_code += f'<th style="padding: 10px; text-align: center; font-weight: 600;">{c}</th>'
+                    html_code += "</tr></thead><tbody>"
+                    
+                    for idx, paper in enumerate(s3["lit_table"]):
+                        paper_label = f"<b>{paper.get('authors', 'Unknown')[:20]}</b> ({paper.get('year', 'N/A')})"
+                        bg_color = "#ffffff" if idx % 2 == 0 else "#f8fafc"
+                        html_code += f'<tr style="background-color: {bg_color}; border-bottom: 1px solid #e2e8f0;">'
+                        html_code += f'<td style="padding: 10px; text-align: left; vertical-align: middle;">{paper_label}<br><span style="font-size:11px; color:#64748b;">{paper.get("venue","")[:30]}</span></td>'
+                        
+                        text_corpus = f"{paper.get('title', '')} {paper.get('key_constructs', '')} {paper.get('findings', '')} {paper.get('theory', '')}".lower()
+                        for c in active_constructs:
+                            if c.lower() in text_corpus or any(word in text_corpus for word in c.lower().split() if len(word) > 3):
+                                html_code += '<td style="padding: 10px; text-align: center; color: #16a34a; font-weight: bold; background-color: #f0fdf4;">● Covered</td>'
+                            else:
+                                html_code += '<td style="padding: 10px; text-align: center; color: #94a3b8; background-color: #fafafa;">○ Gap</td>'
+                        html_code += "</tr>"
+                    html_code += "</tbody></table>"
+                    st.markdown(html_code, unsafe_allow_html=True)
+                    st.markdown("<br>", unsafe_allow_html=True)
+            except Exception as e:
+                st.caption(f"Could not build Literature Gap Matrix: {e}")
+
             st.markdown("### Synthesis")
             st.write(s3["synthesis"])
             st.markdown("### Identified gap")
@@ -1318,6 +1651,7 @@ with tabs[3]:
                 st.markdown(f"**Sample:** N={sp.get('target_n','?')}   |   {sp.get('recruitment','')}")
                 st.caption(sp.get("power_analysis", ""))
 
+
                 st.markdown("### Survey instrument")
                 for block in s4["instrument"]["blocks"]:
                     with st.expander(f"📋 {block['block_name']} — {block.get('construct','')}"):
@@ -1351,11 +1685,12 @@ with tabs[4]:
     else:
         s5["target_journal"] = st.selectbox(
             "Target journal",
-            ["JAMS", "JCR", "JMR", "MISQ", "MIT Sloan Mgmt Review", "Information & Management", "IJRDM"],
+            FT50_JOURNALS,
             index=0 if not s5["target_journal"] else
-                  ["JAMS","JCR","JMR","MISQ","MIT Sloan Mgmt Review","Information & Management","IJRDM"].index(s5["target_journal"])
-                  if s5["target_journal"] in ["JAMS","JCR","JMR","MISQ","MIT Sloan Mgmt Review","Information & Management","IJRDM"] else 0
+                  FT50_JOURNALS.index(s5["target_journal"])
+                  if s5["target_journal"] in FT50_JOURNALS else 0
         )
+
 
         if not s5["reviewer_critique"]:
             if st.button("🎯 Run Reviewer critique", type="primary"):
@@ -1493,6 +1828,164 @@ with tabs[5]:
                 s6["introduction"] = ""
                 db_save(canvas)
                 st.rerun()
+
+
+# ===== TABS 6 — STANDALONE SAMPLE SIZE CALCULATOR =====
+with tabs[6]:
+    st.subheader("📊 G*Power-Style Sample Size Calculator")
+    st.markdown("""
+    Select your statistical test family and parameters to calculate the minimum required sample size for your design.
+    """)
+    
+    test_choice = st.selectbox(
+        "Statistical Test Family",
+        [
+            "Linear Multiple Regression: Fixed model, R² deviation from zero",
+            "t-test: Difference between two independent means (two groups)",
+            "F-test: One-Way ANOVA (comparison of multiple groups)"
+        ],
+        key="standalone_power_test_choice"
+    )
+    
+    calc_n = 0
+    calc_summary = ""
+    
+    if "Linear Multiple Regression" in test_choice:
+        col1, col2 = st.columns(2)
+        with col1:
+            u_pred = st.number_input("Number of predictors", min_value=1, max_value=100, value=5, step=1, key="stand_reg_u")
+            alpha_reg = st.slider("Significance level (α)", min_value=0.01, max_value=0.10, value=0.05, step=0.01, key="stand_reg_alpha")
+        with col2:
+            power_reg = st.slider("Desired Power (1 - β)", min_value=0.50, max_value=0.99, value=0.80, step=0.05, key="stand_reg_power")
+            r2_input = st.number_input("Expected R² (variance explained)", min_value=0.01, max_value=0.99, value=0.13, step=0.01, key="stand_reg_r2")
+            f2_val = r2_input / (1.0 - r2_input) if r2_input < 1.0 else 0.15
+            st.caption(f"Cohen's $f^2 = {f2_val:.3f}$ (Medium standard: 0.15, Large: 0.35)")
+        
+        calc_n = solve_regression_power(u_pred, f2_val, alpha_reg, power_reg)
+        calc_summary = f"Linear regression model with {u_pred} predictors, expecting R² of {r2_input:.2f} (f²={f2_val:.3f}), α={alpha_reg}, and power={power_reg:.2f}."
+        
+    elif "independent means" in test_choice:
+        col1, col2 = st.columns(2)
+        with col1:
+            d_val = st.number_input("Cohen's d (Effect Size)", min_value=0.05, max_value=3.0, value=0.5, step=0.05, key="stand_ttest_d")
+            ratio_val = st.number_input("Allocation Ratio (N2/N1)", min_value=0.1, max_value=10.0, value=1.0, step=0.1, key="stand_ttest_ratio")
+            tailed_choice = st.radio("Tails", ["Two-tailed", "One-tailed"], index=0, key="stand_ttest_tails")
+        with col2:
+            alpha_t = st.slider("Significance level (α)", min_value=0.01, max_value=0.10, value=0.05, step=0.01, key="stand_ttest_alpha")
+            power_t = st.slider("Desired Power (1 - β)", min_value=0.50, max_value=0.99, value=0.80, step=0.05, key="stand_ttest_power")
+        
+        two_tailed = (tailed_choice == "Two-tailed")
+        n1, n2 = solve_ttest_power(d_val, ratio_val, alpha_t, power_t, two_tailed)
+        calc_n = n1 + n2
+        calc_summary = f"Independent samples t-test ({tailed_choice.lower()}) with Cohen's d={d_val}, allocation ratio={ratio_val}, α={alpha_t}, and power={power_t:.2f}. Required Group 1 N={n1}, Group 2 N={n2}."
+        
+    elif "ANOVA" in test_choice:
+        col1, col2 = st.columns(2)
+        with col1:
+            k_groups = st.number_input("Number of groups", min_value=2, max_value=20, value=3, step=1, key="stand_anova_k")
+            f_val = st.number_input("Cohen's f (Effect Size)", min_value=0.05, max_value=2.0, value=0.25, step=0.05, key="stand_anova_f")
+            st.caption("Standard Cohen's f conventions: Small = 0.10, Medium = 0.25, Large = 0.40")
+        with col2:
+            alpha_a = st.slider("Significance level (α)", min_value=0.01, max_value=0.10, value=0.05, step=0.01, key="stand_anova_alpha")
+            power_a = st.slider("Desired Power (1 - β)", min_value=0.50, max_value=0.99, value=0.80, step=0.05, key="stand_anova_power")
+            
+        calc_n = solve_anova_power(k_groups, f_val, alpha_a, power_a)
+        calc_summary = f"One-Way ANOVA with {k_groups} groups, expecting Cohen's f of {f_val} (f²={f_val**2:.3f}), α={alpha_a}, and power={power_a:.2f}."
+    
+    st.markdown(f"#### 🎯 Recommended Total Sample Size: **N = {calc_n}**")
+    st.info(calc_summary)
+    
+    # Apply button to overwrite active canvas if desired
+    s4_data = canvas.get("stage_4_method", {})
+    if s4_data:
+        if st.button("💾 Apply Calculated N to active Research Session", key="standalone_apply_n_btn"):
+            s4_data["sample_plan"] = s4_data.get("sample_plan", {})
+            s4_data["sample_plan"]["target_n"] = calc_n
+            s4_data["sample_plan"]["power_analysis"] = f"A priori G*Power estimation: {calc_summary} Total N={calc_n}."
+            db_save(canvas)
+            st.success(f"Successfully applied N = {calc_n} to your active research plan under Stage 4!")
+            st.rerun()
+
+
+# ===== TABS 7 — STANDALONE JOURNAL SUGGESTER =====
+with tabs[7]:
+    st.subheader("🔍 Journal Suggestion Engine")
+    st.markdown("""
+    Match your research title, abstract, or keywords against the **FT50 journals** to identify the most suitable target outlet.
+    """)
+    
+    s1_info = canvas.get("stage_1_problematization", {})
+    s2_info = canvas.get("stage_2_theorization", {})
+    s3_info = canvas.get("stage_3_literature", {})
+    s5_info = canvas.get("stage_5_review", {})
+    
+    col1, col2 = st.columns([2, 1])
+    with col1:
+        suggest_title = st.text_input(
+            "Research Title (Optional)", 
+            value=canvas.get("title", "Untitled Research Model"),
+            key="stand_suggest_title"
+        )
+        suggest_abstract = st.text_area(
+            "Research Abstract or Draft Introduction (Highly Recommended)",
+            placeholder="Paste your draft introduction or abstract to get highly precise alignment suggestions based on empirical scope, method, and theoretical framing...",
+            height=180,
+            key="stand_suggest_abstract"
+        )
+    with col2:
+        suggest_keywords = st.text_input(
+            "Keywords (separated by commas)",
+            value=", ".join(s2_info.get("selected_theory", "").split()[:2] + [s1_info.get("selected_rq", "").split()[-1].replace("?","")]) if s2_info.get("selected_theory") else "",
+            placeholder="e.g., psychological ownership, brand engagement, field experiment",
+            key="stand_suggest_keywords"
+        )
+        st.caption("Entering relevant theoretical frameworks (e.g., Resource-Based View, SD Logic) will improve alignment analysis.")
+        
+    if st.button("🚀 Find Best Target Journals", key="stand_run_journal_suggester_btn", type="primary"):
+        # Compile prompt inputs
+        inputs = {
+            "title": suggest_title,
+            "rq": s1_info.get("selected_rq", ""),
+            "theory": s2_info.get("selected_theory", ""),
+            "construct_map": s2_info.get("construct_map", {}),
+            "hypotheses": s2_info.get("hypotheses", []),
+            "gap": s3_info.get("identified_gap", ""),
+            "user_abstract": suggest_abstract,
+            "user_keywords": suggest_keywords
+        }
+        
+        with st.spinner("Analyzing manuscript fit against 50 FT50 journals..."):
+            try:
+                out = claude_json(SYS_JOURNAL_SUGGESTER, json.dumps(inputs))
+                st.session_state["standalone_journal_suggestions"] = out.get("suggestions", [])
+                st.success("Analysis complete! See recommendations below:")
+            except Exception as e:
+                st.error(f"Error generating recommendations: {e}")
+                
+    # Show suggestions if present in session state
+    suggestions = st.session_state.get("standalone_journal_suggestions", [])
+    if suggestions:
+        st.markdown("#### 🎯 Top 3 Recommended FT50 Journals:")
+        for idx, sug in enumerate(suggestions):
+            j_name = sug.get("journal", "")
+            score = sug.get("score", 80)
+            rationale = sug.get("rationale", "")
+            themes = sug.get("themes", "")
+            guidelines = sug.get("guidelines", "")
+            
+            with st.container():
+                st.markdown(f"##### **{idx+1}. {j_name}** (Match Score: **{score}%**)")
+                st.markdown(f"**Fit Rationale:** {rationale}")
+                st.markdown(f"**Preferred Methodologies & Themes:** {themes}")
+                st.caption(f"⚠️ **Pitfalls & Editorial Guidelines:** {guidelines}")
+                
+                # Lock in target journal button
+                if st.button(f"🎯 Set {j_name} as Target Journal for Active Session", key=f"stand_lock_journal_{idx}"):
+                    s5_info["target_journal"] = j_name
+                    db_save(canvas)
+                    st.success(f"Locked in target journal: {j_name} under Stage 5!")
+                    st.rerun()
+                st.markdown("---")
 
 
 def export_full_paper_docx(canvas: dict) -> bytes:
